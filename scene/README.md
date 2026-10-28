@@ -46,8 +46,13 @@ Outputs used by the site:
 - `public/gallery/lightmaps/*.webp` baked light per group (8-bit, scaled)
 - `public/gallery/env_a.hdr`, `env_b.hdr` reflection panoramas
 - `public/gallery/poster.webp` first frame, shown until WebGL is ready
-- `src/components/gallery/data/path.json` camera path, hotspots, info card
+- `src/components/gallery/data/path.json` camera path, hotspots, wall labels (placeholder credits from `lib/collection.py` `CREDITS`)
 - `src/components/gallery/data/lightmaps.json` lightmap files and intensities
 
 The camera path is defined once in `build_scene.py` (`keys`) and interpolated
 identically in Blender (`lib/camera_path.py`) and the browser (`path.js`).
+It stops at every artwork: `art_view` places the camera square on to a work,
+far enough back to fit it with a margin, and `hold` keeps it there for a stretch
+of scroll while it drifts slightly. The walk's length (`WALK`), the Rooms menu
+stops and the point where the rooms turn light are written to `path.json` too,
+so the site's scroll height and menu follow any change to the path.

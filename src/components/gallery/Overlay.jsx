@@ -3,19 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { HOTSPOTS } from "./path";
+import { HOTSPOTS, LABELS, ROOMS } from "./path";
 import { useGallery } from "./store";
 import { CartIcon, ExpandIcon, EyeIcon, PlanIcon, SearchIcon, UserIcon } from "./icons";
 import styles from "./gallery.module.css";
 
-// scroll progress that frames each room (see the camera keys in scene/build_scene.py)
-export const ROOMS = [
-  { label: "Material library", p: 0 },
-  { label: "Textile wall", p: 0.227 },
-  { label: "Gallery room", p: 0.462 },
-  { label: "The vault", p: 0.773 },
-  { label: "Exhibition hall", p: 0.924 },
-];
+// each work's place in the walk, for the caption's "No. 04 / 17"
+const WORK_NUMBER = new Map(LABELS.flatMap((l) => l.works).map((w, i) => [w.title, i + 1]));
 
 // menu items carried over from the previous zigguratss.com site
 const PRIMARY_LINKS = [
@@ -124,16 +118,36 @@ export function StageOverlay() {
         </button>
       ))}
 
-      <aside className={styles.card} ref={(el) => store.setCard(el)} aria-live="polite">
-        <div className={styles.cardBody}>
-          <p className={styles.cardEyebrow}>Exhibitions</p>
-          <p className={styles.cardText}>Private viewings by appointment at ZA Gallery.</p>
-        </div>
-        <div className={styles.cardActions}>
-          <a href="#contact">Book a viewing</a>
-          <a href="#galleries">All galleries</a>
-        </div>
-      </aside>
+      {LABELS.map((l) => (
+        <aside
+          key={l.id}
+          className={styles.caption}
+          data-count={l.works.length}
+          ref={(el) => store.setLabel(l.id, el)}
+          aria-hidden="true"
+        >
+          {l.works.map((w) => (
+            <div key={w.title} className={styles.captionWork}>
+              <p className={styles.captionIndex}>
+                No. {String(WORK_NUMBER.get(w.title)).padStart(2, "0")}
+                <span>/ {String(WORK_NUMBER.size).padStart(2, "0")}</span>
+              </p>
+              <p className={styles.captionTitle}>{w.title}</p>
+              <p className={styles.captionArtist}>{w.artist}</p>
+              <p className={styles.captionMeta}>
+                {w.medium}
+                <span aria-hidden="true">·</span>
+                {w.year}
+                <span aria-hidden="true">·</span>
+                {w.size}
+              </p>
+            </div>
+          ))}
+          <span className={styles.captionProgress} aria-hidden="true">
+            <span />
+          </span>
+        </aside>
+      ))}
 
       <div className={styles.bottomLeft} ref={roomsRef}>
         <button

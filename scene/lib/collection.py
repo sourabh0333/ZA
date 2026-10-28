@@ -45,4 +45,27 @@ WORKS = [
     ("beige_field", "beige", 14.40, 1.60, 1.30, 1.75, "color_field", "dusk", 61, "float_black"),
 ]
 
-assert len({w[0] for w in WORKS}) == len(WORKS)
+# Wall-label details shown on the website when the camera stops at a work.
+# PLACEHOLDERS: invented artists and titles, to be replaced with the real
+# collection. Sizes are written from each work's frame size.
+CREDITS = {
+    "pier": ("Mira Castell", "Ember Fields", 2023, "Oil on canvas"),
+    "corridor": ("Kenji Arai", "Ensō No. 4", 2022, "Sumi ink on paper"),
+    "curtain": ("Lena Okafor", "Evening Over the Ridge", 2024, "Acrylic on canvas"),
+    "centre": ("Aarav Mehta", "Monsoon Gesture", 2021, "Oil on linen"),
+    "west_0": ("Sofia Brandt", "Construct VII", 2023, "Acrylic on canvas"),
+    "west_1": ("Noor Haddad", "Garden Shapes", 2024, "Acrylic on canvas"),
+    "east": ("Daniel Reyes", "Horizon Split", 2022, "Acrylic on canvas"),
+    "door_l": ("Inès Laurent", "Undertow", 2020, "Acrylic on canvas"),
+    "door_r": ("Ravi Sethi", "City After Rain", 2023, "Archival pigment print"),
+    "vol_w": ("Hana Kim", "Homage in Ochre", 2022, "Oil on panel"),
+    "vol_l": ("Tomás Vidal", "Night Tide", 2024, "Acrylic on canvas"),
+    "vol_r": ("Priya Nair", "Torn Letters", 2023, "Mixed-media collage"),
+    "vault_c": ("Elena Moreau", "Golden Sun", 2019, "Gold leaf and pigment on panel"),
+    "vault_l": ("Haruto Sato", "Mended Night", 2020, "Lacquer and gold on panel"),
+    "vault_r": ("Isabel Duarte", "Gilded Field", 2018, "Oil and gold leaf on canvas"),
+    "beige_x": ("Oscar Lind", "Arc of Days", 2023, "Acrylic on canvas"),
+    "beige_field": ("Maya Rao", "Blue Hour", 2024, "Oil on canvas"),
+}
+
+assert len({w[0] for w in WORKS}) == len(WORKS) and set(CREDITS) == {w[0] for w in WORKS}

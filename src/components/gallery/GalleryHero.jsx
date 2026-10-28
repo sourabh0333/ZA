@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Lenis from "lenis";
 import { useProgress } from "@react-three/drei";
+import { WALK } from "./path";
 import { GalleryContext, GalleryStore } from "./store";
 import { SiteHeader, StageOverlay } from "./Overlay";
 import styles from "./gallery.module.css";
@@ -111,7 +112,13 @@ export default function GalleryHero({ children }) {
   return (
     <GalleryContext.Provider value={store}>
       <SiteHeader />
-      <section ref={sectionRef} className={styles.hero} data-mode={mode} aria-labelledby="gallery-title">
+      <section
+        ref={sectionRef}
+        className={styles.hero}
+        data-mode={mode}
+        aria-labelledby="gallery-title"
+        style={{ "--walk": WALK }}
+      >
         <div className={styles.stage}>
           <div className={styles.posterWrap} data-hidden={ready}>
             <Image

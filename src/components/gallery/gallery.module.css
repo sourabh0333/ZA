@@ -2,8 +2,8 @@
 
 .hero {
   position: relative;
-  /* the original 700vh walk plus the gallery room (the path is 1.32x longer) */
-  height: 924vh;
+  /* 700vh per unit of walk; the walk lengthens with every artwork stop */
+  height: calc(700vh * var(--walk, 1));
   background: var(--ink);
 }
 
@@ -276,72 +276,146 @@
   }
 }
 
-.card {
+/* caption for the work(s) the camera is holding on: lower-left of the stage,
+   frosted glass, its lines rising in one after another */
+.caption {
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   position: absolute;
-  left: 0;
-  top: 0;
-  width: min(340px, 72vw);
-  color: #1d1914;
-  will-change: transform;
+  left: calc(var(--frame-x) + 14px);
+  bottom: 62px;
+  width: min(330px, calc(100vw - 2 * var(--frame-x) - 28px));
+  padding: 20px 22px 22px;
+  background: rgb(14 12 10 / 0.5);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  border: 1px solid rgb(244 239 231 / 0.14);
+  color: var(--paper);
+  opacity: 0;
+  transform: translateY(14px);
+  visibility: hidden;
   pointer-events: none;
+  transition: opacity 450ms ease, transform 600ms var(--ease), visibility 0s linear 600ms;
 }
 
-.cardBody,
-.cardActions {
+.caption[data-visible="true"] {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition: opacity 600ms ease 120ms, transform 800ms var(--ease) 120ms, visibility 0s;
+}
+
+.captionWork + .captionWork {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgb(244 239 231 / 0.12);
+}
+
+.captionWork > * {
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 500ms ease, transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: opacity 300ms ease, transform 300ms ease;
 }
 
-.cardBody {
-  padding: 16px 18px 34px;
-  background: rgb(206 192 170 / 0.72);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-.cardEyebrow {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-
-.cardText {
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.cardActions {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 18px;
-  background: rgb(238 231 220 / 0.92);
-  font-size: 12px;
-}
-
-.cardActions a {
-  pointer-events: none;
-}
-
-.card[data-visible="true"] {
-  pointer-events: auto;
-}
-
-.card[data-visible="true"] .cardActions a {
-  pointer-events: auto;
-}
-
-.card[data-visible="true"] .cardActions {
+.caption[data-visible="true"] .captionWork > * {
   opacity: 1;
   transform: none;
+  transition: opacity 700ms ease, transform 900ms var(--ease);
 }
 
-.card[data-visible="true"] .cardBody {
-  opacity: 1;
-  transform: none;
+.caption[data-visible="true"] .captionWork > :nth-child(1) {
   transition-delay: 220ms;
+}
+
+.caption[data-visible="true"] .captionWork > :nth-child(2) {
+  transition-delay: 300ms;
+}
+
+.caption[data-visible="true"] .captionWork > :nth-child(3) {
+  transition-delay: 380ms;
+}
+
+.caption[data-visible="true"] .captionWork > :nth-child(4) {
+  transition-delay: 460ms;
+}
+
+.captionIndex {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sand);
+  font-variant-numeric: tabular-nums;
+}
+
+.captionIndex span {
+  color: rgb(244 239 231 / 0.4);
+}
+
+.captionIndex::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgb(244 239 231 / 0.14);
+}
+
+.captionTitle {
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+}
+
+.captionArtist {
+  margin-top: 5px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: rgb(244 239 231 / 0.82);
+}
+
+.captionMeta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 7px;
+  margin-top: 12px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgb(244 239 231 / 0.55);
+}
+
+/* several works at one stop: a tighter list */
+.caption:not([data-count="1"]) .captionTitle {
+  font-size: 16px;
+}
+
+.caption:not([data-count="1"]) .captionIndex {
+  margin-bottom: 7px;
+}
+
+.caption:not([data-count="1"]) .captionWork + .captionWork {
+  margin-top: 11px;
+  padding-top: 11px;
+}
+
+.captionProgress {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  height: 2px;
+  background: rgb(244 239 231 / 0.08);
+}
+
+.captionProgress span {
+  display: block;
+  height: 100%;
+  background: var(--sand);
+  transform: scaleX(var(--hold, 0));
+  transform-origin: left center;
+  transition: transform 200ms linear;
 }
 
 .bottomLeft {
@@ -498,5 +572,18 @@
 
   .logoImage {
     height: 40px;
+  }
+
+  .caption {
+    bottom: 58px;
+    padding: 15px 16px 16px;
+  }
+
+  .captionTitle {
+    font-size: 17px;
+  }
+
+  .caption:not([data-count="1"]) .captionMeta {
+    display: none;
   }
 }

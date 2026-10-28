@@ -17,7 +17,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import lightmaps from "./data/lightmaps.json";
-import { CARD, FOV, HOTSPOTS, samplePath, VAULT } from "./path";
+import { BRIGHT_FROM, FOV, HOTSPOTS, LABELS, samplePath, VAULT } from "./path";
 import { useGallery } from "./store";
 import { VaultFx } from "./vault";
 import styles from "./gallery.module.css";
@@ -27,7 +27,6 @@ const ENV_URLS = ["/gallery/env_a.hdr", "/gallery/env_b.hdr"];
 const LM_NAMES = Object.keys(lightmaps);
 const LM_URLS = LM_NAMES.map((n) => lightmaps[n].file);
 const EXPOSURE = 1.0;
-const BRIGHT_FROM = 0.803; // progress where the rooms turn light and the nav tab appears
 // Baked light already contains the room's indirect light, so the environment
 // map is used for reflections only: drop its diffuse (irradiance) term.
 const LIGHTS_FRAGMENT_MAPS = ShaderChunk.lights_fragment_maps.replace(
@@ -120,13 +119,17 @@ function syncFrame(store, camera, size, dt, flags) {
     el.style.opacity = String(o);
     el.style.pointerEvents = o > 0.5 ? "auto" : "none";
   }
-  if (store.cardEl) {
-    placeAt(store.cardEl, CARD.pos, camera, size);
-    const show = p > CARD.from;
-    if (show !== flags.card) {
-      flags.card = show;
-      store.cardEl.setAttribute("data-visible", String(show));
+  for (const l of LABELS) {
+    const el = store.labelEls.get(l.id);
+    if (!el) continue;
+    const t = (p - l.range[0]) / (l.range[1] - l.range[0]);
+    const show = t >= 0 && t <= 1;
+    if (show !== flags.labels[l.id]) {
+      flags.labels[l.id] = show;
+      el.setAttribute("data-visible", String(show));
     }
+    // the thin line along the caption's foot fills as the camera holds on the work
+    if (show) el.style.setProperty("--hold", Math.min(1, t).toFixed(3));
   }
   const bright = p > BRIGHT_FROM;
   if (bright !== flags.bright && store.headerEl) {
@@ -188,7 +191,7 @@ function Ready({ onReady }) {
 
 function CameraRig() {
   const store = useGallery();
-  const flags = useRef({ bright: false, card: false });
+  const flags = useRef({ bright: false, labels: {} });
   useFrame((state, dt) => syncFrame(store, state.camera, state.size, dt, flags.current));
   return null;
 }

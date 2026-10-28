@@ -7,7 +7,7 @@ export class GalleryStore {
   target = 0; // scroll progress the user asked for (0..1)
   smooth = 0; // damped progress the camera is actually at
   hotspotEls = new Map();
-  cardEl = null;
+  labelEls = new Map();
   headerEl = null;
   cursorEl = null;
   scroller = null;
@@ -32,8 +32,9 @@ export class GalleryStore {
     else this.hotspotEls.delete(id);
   }
 
-  setCard(el) {
-    this.cardEl = el;
+  setLabel(id, el) {
+    if (el) this.labelEls.set(id, el);
+    else this.labelEls.delete(id);
   }
 
   setHeader(el) {

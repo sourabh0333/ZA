@@ -19,7 +19,7 @@ from mathutils import Matrix, Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import art, tex  # noqa: E402
 from lib.camera_path import to_three  # noqa: E402
-from lib.collection import WORKS  # noqa: E402
+from lib.collection import CREDITS, WORKS  # noqa: E402
 from lib.geo import (area, box, cylinder, disk, finish, frame_matrix, group, link, material,  # noqa: E402
                      plane, point, rot_z, spot, torus, wall_quad)
 from lib.paths import ASSETS, BLEND, OUT, WEB_DATA  # noqa: E402
@@ -889,49 +889,118 @@ scene.world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.0
 print("[build] camera path")
 EYE = 1.55
 FOV = 50           # vertical field of view, degrees (Blender camera and website)
-# Times are written on a 0..WALK scale and divided by WALK: the original walk
-# was 1.0 long, and the side room adds 0.32 between the curtains and the vault.
-WALK = 1.32
+# The walk stops at every work: the camera arrives square on to it, far enough
+# back that the whole work and a margin fill the view, and holds there for a
+# stretch of scroll while it drifts a few centimetres (so the stop never feels
+# frozen), before moving on. Times are written on a 0..WALK scale and divided
+# by WALK; the hero's scroll height grows with WALK (path.json "walk").
+WALK = 2.10
+HALF_V = math.radians(FOV / 2)
+HALF_H = math.radians(31)     # half the width of view on a fairly narrow (4:3) screen
+WORK_BY_ID = {w[0]: w for w in WORKS}
 
 
 def P(t):
     return round(t / WALK, 4)
 
 
-ROOM_TGT_Z = 1.75
+MARGIN = 1.85                # the work fills about half the view, with wall around it
+
+
+def art_view(wid, slide=0.0, d=None):
+    """Camera square on to a work: on its centre line, eye height, far enough
+    back that the work fills about half the view; slide moves along the wall."""
+    _, wall, s_, zc, w, h, *_ = WORK_BY_ID[wid]
+    F = wall_frame(wall, s_)
+    d = d or max(h * MARGIN / 2 / math.tan(HALF_V), w * MARGIN / 2 / math.tan(HALF_H))
+    pos = F @ Vector((slide, -d, 0))
+    return (pos.x, pos.y, EYE), tuple(F @ Vector((0, 0, zc)))
+
+
+def key(t, pos, target):
+    return {"p": P(t), "pos": tuple(pos), "target": tuple(target)}
+
+
+labels = []
+
+
+def hold(t0, t1, a, b, works=()):
+    """Two keys a short way apart in space but a long way apart in scroll; the
+    works in view share one caption on the website for the length of the hold."""
+    if works:
+        labels.append({"works": list(works), "range": [P(t0), P(t1)]})
+    return [key(t0, *a), key(t1, *b)]
+
+
+def single(t0, t1, wid, drift=0.1, d=None):
+    return hold(t0, t1, art_view(wid, -drift, d), art_view(wid, drift, d), works=[wid])
+
+
+VAULT_VIEW = tuple(B(VAULT_U, CH_V1, 1.65))
 keys = [
-    {"p": P(0.00), "pos": (-1.0, -0.4, EYE), "target": (-0.7, 6.0, 1.38)},
-    {"p": P(0.08), "pos": (-0.5, -0.3, EYE), "target": (-0.1, 6.0, 1.38)},
-    {"p": P(0.22), "pos": (4.0, 0.1, EYE), "target": (5.4, 6.0, 1.42)},
-    {"p": P(0.36), "pos": (7.6, 0.5, EYE), "target": (9.2, 6.0, 1.38)},
-    # turn into the corridor, through the doorway: all three walls in view
-    {"p": P(0.45), "pos": (13.5, 3.9, EYE), "target": (15.6, 10.0, 1.6)},
-    {"p": P(0.51), "pos": (14.75, 5.7, EYE), "target": (ROOM_CX, RY1, ROOM_TGT_Z)},
-    {"p": P(0.56), "pos": (ROOM_CX, 8.5, EYE), "target": (ROOM_CX, RY1, ROOM_TGT_Z)},
-    {"p": P(0.61), "pos": (ROOM_CX, 10.3, EYE), "target": (ROOM_CX, RY1, ROOM_TGT_Z)},
-    # look left, ahead, right, then turn back to the doorway wall and its works
-    {"p": P(0.66), "pos": (ROOM_CX + 0.5, 11.4, EYE), "target": (RX0, 12.9, 1.7)},
-    {"p": P(0.70), "pos": (ROOM_CX, 11.7, EYE), "target": (ROOM_CX, RY1, ROOM_TGT_Z)},
-    {"p": P(0.74), "pos": (ROOM_CX - 0.5, 11.4, EYE), "target": (RX1, 12.9, 1.7)},
-    {"p": P(0.78), "pos": (ROOM_CX, 12.4, EYE), "target": (ROOM_CX - 0.2, RY0, 1.6)},
-    # back down the corridor, wide round the black volume's corner, to the vault
-    {"p": P(0.82), "pos": (14.9, 6.2, EYE), "target": (13.2, 2.0, 1.5)},
-    {"p": P(0.86), "pos": (13.5, 4.3, EYE), "target": (13.6, -1.0, 1.5)},
-    {"p": P(0.89), "pos": (12.6, 1.4, EYE), "target": (16.4, 0.3, 1.5)},
-    {"p": P(0.92), "pos": tuple(B(2.2, -5.2, EYE)), "target": tuple(B(3.5, 0.0, 1.5))},
-    {"p": P(1.02), "pos": tuple(B(4.75, -5.0, EYE)), "target": tuple(B(4.85, 0.0, 1.55))},
-    {"p": P(1.12), "pos": tuple(B(7.5 + DU, -2.4, EYE)), "target": tuple(B(8.0 + DU, ART_V, 1.55))},
-    {"p": P(1.21), "pos": tuple(B(8.25 + DU, 1.2, EYE)), "target": tuple(B(8.3 + DU, ART_V, 1.6))},
-    {"p": P(1.32), "pos": tuple(B(10.6 + DU, 1.5, EYE)), "target": tuple(B(11.7 + DU, ART_V, 1.58))},
+    key(0.00, (-1.0, -0.4, EYE), (-0.7, 6.0, 1.38)),
+    key(0.08, (-0.5, -0.3, EYE), (-0.1, 6.0, 1.38)),
+    key(0.20, (4.0, 0.1, EYE), (5.4, 6.0, 1.42)),
+    *single(0.30, 0.38, "curtain", 0.15),
+    *single(0.45, 0.51, "pier"),
+    # round the pier's corner into the corridor (whose far wall limits how far
+    # back the camera can stand for this work and the black wall's later)
+    key(0.56, (14.6, 5.3, EYE), art_view("corridor")[1]),
+    *single(0.60, 0.65, "corridor", 0.06, d=2.8),
+    # through the doorway: the back wall's canvas, then each wall in turn
+    key(0.70, (ROOM_CX, 9.6, EYE), (ROOM_CX, RY1, 1.75)),
+    *hold(0.75, 0.81, art_view("centre", d=5.1), art_view("centre", d=4.8), works=["centre"]),
+    *hold(0.86, 0.92, ((17.2, 12.35, EYE), (RX0, 12.5, 1.7)), ((17.3, 12.65, EYE), (RX0, 12.5, 1.7)),
+          works=["west_0", "west_1"]),
+    # (glance back at the centre so the view never swings through the camera)
+    key(0.955, (15.6, 12.4, EYE), (15.6, RY1, 1.7)),
+    *single(0.99, 1.05, "east"),
+    *hold(1.10, 1.16, ((15.1, 15.55, EYE), (15.12, RY0, 1.7)), ((15.15, 15.3, EYE), (15.12, RY0, 1.7)),
+          works=["door_l", "door_r"]),
+    # out through the doorway to the black volume's end wall
+    key(1.22, (ROOM_CX, 9.6, EYE), (14.8, 7.0, 1.5)),
+    *single(1.27, 1.32, "vol_w", 0.06, d=2.3),
+    # wide round the pier and the volume's corner into frame B
+    key(1.37, (14.9, 6.0, EYE), (13.4, 2.5, 1.5)),
+    key(1.41, (13.5, 4.3, EYE), (13.6, -1.0, 1.5)),
+    *single(1.47, 1.52, "vol_l"),
+    # out past the open door's edge, then square on to the vault: the three
+    # gilded works fill the round opening
+    key(1.545, tuple(B(2.3, -4.6, EYE)), tuple(B(4.2, 3.6, 1.6))),
+    *hold(1.59, 1.67, (tuple(B(4.6, -4.6, EYE)), VAULT_VIEW), (tuple(B(4.85, -4.35, EYE)), VAULT_VIEW),
+          works=["vault_l", "vault_c", "vault_r"]),
+    *single(1.72, 1.77, "vol_r", 0.08),
+    # into the beige room: turn to the volume's beige end, then the sideboard
+    key(1.82, tuple(B(10.2, -2.2, EYE)), tuple(B(10.0, 2.5, 1.6))),
+    *single(1.87, 1.92, "beige_x"),
+    *hold(1.97, 2.02, (tuple(B(10.6, 0.6, EYE)), tuple(B(10.95, ART_V, 1.55))),
+          (tuple(B(10.8, 0.65, EYE)), tuple(B(10.95, ART_V, 1.55)))),
+    # last: the blue colour field
+    *single(2.06, 2.10, "beige_field", 0.06),
 ]
+assert all(a["p"] < b["p"] for a, b in zip(keys, keys[1:]))
+# the last label stays up to the end of the walk
+labels[-1]["range"][1] = 1.01
 hotspots = [
     {"id": "materials", "label": "Material library", "pos": (-2.12, 5.84, 1.08), "range": [P(0.0), P(0.2)]},
-    {"id": "curtains", "label": "Textile wall", "pos": (6.6, 5.8, 1.6), "range": [P(0.18), P(0.4)]},
-    {"id": "room", "label": "Gallery room", "pos": (ROOM_CX, RY1 - 0.05, 2.0), "range": [P(0.56), P(0.76)]},
-    {"id": "vault", "label": "The vault", "pos": tuple(B(VAULT_U + 0.3, 0.6, VAULT_Z)), "range": [P(0.87), P(1.12)]},
-    {"id": "lamp", "label": "Lighting", "pos": tuple(B(LAMP[0], LAMP[1] - 0.1, LAMP[2] + 0.36)), "range": [P(1.12), P(1.27)]},
+    {"id": "curtains", "label": "Textile wall", "pos": (6.6, 5.8, 1.6), "range": [P(0.18), P(0.27)]},
+    {"id": "room", "label": "Gallery room", "pos": (ROOM_CX, RY1 - 0.05, 2.0), "range": [P(0.7), P(0.74)]},
+    {"id": "vault", "label": "The vault", "pos": tuple(B(VAULT_U + 0.3, 0.6, VAULT_Z)), "range": [P(1.55), P(1.7)]},
+    {"id": "lamp", "label": "Lighting", "pos": tuple(B(LAMP[0], LAMP[1] - 0.1, LAMP[2] + 0.36)), "range": [P(1.94), P(2.03)]},
 ]
-card = {"pos": tuple(B(10.6 + DU, ART_V - 0.05, 1.55)), "from": P(1.25)}
+
+
+def credit(wid):
+    artist, title, year, medium = CREDITS[wid]
+    _, _, _, _, w, h, *_ = WORK_BY_ID[wid]
+    return {"artist": artist, "title": title, "year": year, "medium": medium,
+            "size": f"{round(w * 100)} \u00d7 {round(h * 100)} cm"}
+
+
+# the Rooms menu's stops, and where the rooms turn light (the nav tab appears)
+rooms = [("Material library", 0.0), ("Textile wall", 0.34), ("Gallery room", 0.78), ("The vault", 1.63),
+         ("Exhibition hall", 1.995)]
+BRIGHT_FROM = 1.8
 # Only write the website's path when asked: while the rooms are being designed
 # the live site keeps the path that matches its baked model.
 WRITE_WEB = "--web" in sys.argv
@@ -942,18 +1011,25 @@ with open(os.path.join(OUT, "camera_keys.json"), "w") as f:
     json.dump({"keys": [{"p": k["p"], "pos": list(k["pos"]), "target": list(k["target"])} for k in keys]}, f, indent=1)
 path_data = {
     "fov": FOV,
+    "walk": WALK,
+    "brightFrom": P(BRIGHT_FROM),
+    "rooms": [{"label": label, "p": P(t)} for label, t in rooms],
     "keys": [{"p": k["p"], "pos": to_three(k["pos"]), "target": to_three(k["target"])} for k in keys],
     "hotspots": [{**h, "pos": to_three(h["pos"])} for h in hotspots],
-    "card": {"pos": to_three(card["pos"]), "from": card["from"]},
-    # the vault door's hinge and swing, and where its smoke comes out
+    # captions: who made the work(s) in view, shown while the camera holds there
+    "labels": [{"id": "-".join(lb["works"]), "range": lb["range"], "works": [credit(wid) for wid in lb["works"]]}
+               for lb in labels],
+    # the vault door's hinge and swing, and where its smoke comes out; it opens
+    # as the camera reaches the landscape beside it, so the smoke has cleared
+    # by the time the view lines up with the opening
     "vault": {
         "hinge": to_three(tuple(B(*HINGE))),
         "openDeg": DOOR_OPEN,
         "mouth": to_three(tuple(B(VAULT_U, 0.05, VAULT_Z))),
         "out": to_three(tuple(FB.to_3x3() @ Vector((0, -1, 0)))),
         "radius": VAULT_R,
-        "openFrom": P(0.89),
-        "openTo": P(1.1),
+        "openFrom": P(1.43),
+        "openTo": P(1.78),
     },
 }
 with open(os.path.join(WEB_DATA if WRITE_WEB else OUT, "path.json"), "w") as f:
