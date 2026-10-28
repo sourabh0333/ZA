@@ -244,38 +244,6 @@
   right: var(--frame-x);
 }
 
-.hotspot {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: rgb(250 247 242 / 0.94);
-  color: #1d1914;
-  box-shadow: 0 0 0 0 rgb(250 247 242 / 0.45), 0 6px 18px rgb(0 0 0 / 0.25);
-  opacity: 0;
-  will-change: transform, opacity;
-  animation: pulse 2.6s ease-out infinite;
-}
-
-.hotspot svg {
-  width: 15px;
-  height: 15px;
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgb(250 247 242 / 0.45), 0 6px 18px rgb(0 0 0 / 0.25);
-  }
-  70%,
-  100% {
-    box-shadow: 0 0 0 14px rgb(250 247 242 / 0), 0 6px 18px rgb(0 0 0 / 0.25);
-  }
-}
-
 /* caption for the work(s) the camera is holding on: lower-left of the stage,
    frosted glass, its lines rising in one after another */
 .caption {
@@ -628,18 +596,8 @@
   }
 }
 
-/* touch screens: the hotspots need a finger-sized target */
+/* touch screens: a finger-sized target */
 @media (pointer: coarse) {
-  .hotspot {
-    width: 38px;
-    height: 38px;
-  }
-
-  .hotspot svg {
-    width: 17px;
-    height: 17px;
-  }
-
   .cornerButton {
     width: 32px;
     height: 32px;
