@@ -17,7 +17,8 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import lightmaps from "./data/lightmaps.json";
-import { BRIGHT_FROM, FOV, HOTSPOTS, LABELS, samplePath, VAULT } from "./path";
+import { frame, measureGallery } from "./framing";
+import { BRIGHT_FROM, FOV, HOTSPOTS, LABELS, samplePath, setFraming, VAULT } from "./path";
 import { useGallery } from "./store";
 import { VaultFx } from "./vault";
 import styles from "./gallery.module.css";
@@ -93,6 +94,7 @@ function prepareGallery(scene, lmTextures, [envA, envB], gl) {
 const tmpPos = new Vector3();
 const tmpTarget = new Vector3();
 const tmpProj = new Vector3();
+const tmpShift = [0, 0];
 
 function placeAt(el, pos, camera, size) {
   tmpProj.set(pos[0], pos[1], pos[2]).project(camera);
@@ -102,13 +104,26 @@ function placeAt(el, pos, camera, size) {
   return tmpProj.z < 1;
 }
 
+/** Lens shift: keeps the work centred in the part of the screen the caption leaves clear. */
+function shiftLens(camera, size, sx, sy) {
+  const v = camera.view;
+  if (!sx && !sy) {
+    if (v?.enabled) camera.clearViewOffset();
+    return;
+  }
+  const same = v?.enabled && v.fullWidth === size.width && v.fullHeight === size.height;
+  if (same && Math.abs(v.offsetX - sx) < 0.25 && Math.abs(v.offsetY - sy) < 0.25) return;
+  camera.setViewOffset(size.width, size.height, sx, sy, size.width, size.height);
+}
+
 /** Moves the camera along the path and keeps the DOM overlay in step. */
 function syncFrame(store, camera, size, dt, flags) {
   const p = store.step(dt);
-  samplePath(p, tmpPos, tmpTarget);
+  const [sx, sy] = samplePath(p, tmpPos, tmpTarget, tmpShift);
   camera.position.copy(tmpPos);
   camera.lookAt(tmpTarget);
   camera.updateMatrixWorld();
+  shiftLens(camera, size, sx, sy);
 
   for (const h of HOTSPOTS) {
     const el = store.hotspotEls.get(h.id);
@@ -122,8 +137,9 @@ function syncFrame(store, camera, size, dt, flags) {
   for (const l of LABELS) {
     const el = store.labelEls.get(l.id);
     if (!el) continue;
-    const t = (p - l.range[0]) / (l.range[1] - l.range[0]);
-    const show = t >= 0 && t <= 1;
+    // (the last caption's range runs past the end of the walk; its line fills at the end)
+    const t = (p - l.range[0]) / (Math.min(1, l.range[1]) - l.range[0]);
+    const show = p >= l.range[0] && p <= l.range[1];
     if (show !== flags.labels[l.id]) {
       flags.labels[l.id] = show;
       el.setAttribute("data-visible", String(show));
@@ -148,6 +164,7 @@ function Gallery({ onReady }) {
   const baked = useMemo(() => prepareGallery(gltf.scene, lmTextures, envs, gl), [gltf, lmTextures, envs, gl]);
   const vault = useMemo(() => (VAULT ? VaultFx.for(gltf.scene) : null), [gltf]);
   const store = useGallery();
+  useFraming(gltf.scene, store);
   useFrame((_, dt) => vault?.update(store.smooth, dt));
 
   useEffect(() => {
@@ -162,6 +179,44 @@ function Gallery({ onReady }) {
       <Ready onReady={onReady} />
     </>
   );
+}
+
+/** Fits the camera path to the stage: closer to the design on wide screens, further back on narrow ones. */
+function useFraming(scene, store) {
+  const size = useThree((s) => s.size);
+  const get = useThree((s) => s.get);
+  const gallery = useMemo(() => measureGallery(scene), [scene]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const apply = () => {
+      if (cancelled) return;
+      const frameX = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--frame-x")) || 16;
+      const captions = new Map();
+      for (const [id, el] of store.labelEls) {
+        captions.set(id, { top: el.offsetTop, right: el.offsetLeft + el.offsetWidth });
+      }
+      const layout = {
+        header: store.headerEl?.offsetHeight ?? 64,
+        side: frameX + 8,
+        bottomBar: 56,
+        captions,
+      };
+      const { fov, keys, shifts } = frame(gallery, size.width, size.height, layout);
+      setFraming(keys, shifts);
+      const { camera } = get();
+      if (camera.fov !== fov) {
+        camera.fov = fov;
+        camera.updateProjectionMatrix();
+      }
+    };
+    apply();
+    // caption heights change once the web font arrives
+    document.fonts?.ready.then(apply);
+    return () => {
+      cancelled = true;
+    };
+  }, [gallery, get, store, size.width, size.height]);
 }
 
 // Stand-in lighting used only while the model has not been baked yet.

@@ -7,6 +7,13 @@
   --frame-x: clamp(14px, 2.4vw, 40px);
 }
 
+/* a phone on its side: every pixel of height counts */
+@media (orientation: landscape) and (max-height: 560px) {
+  :root {
+    --header-h: 52px;
+  }
+}
+
 *,
 *::before,
 *::after {
