@@ -69,7 +69,6 @@ export const FOV = pathData.fov;
 export const WALK = pathData.walk; // the walk's length; the hero's scroll height scales with it
 export const BRIGHT_FROM = pathData.brightFrom; // where the rooms turn light (the nav tab appears)
 export const ROOMS = pathData.rooms; // the Rooms menu's stops
-export const HOTSPOTS = pathData.hotspots;
 export const LABELS = pathData.labels; // wall labels: who made each work, shown while the camera holds on it
 export const VAULT = pathData.vault;
 

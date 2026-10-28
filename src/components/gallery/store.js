@@ -6,7 +6,6 @@ import { createContext, useContext } from "react";
 export class GalleryStore {
   target = 0; // scroll progress the user asked for (0..1)
   smooth = 0; // damped progress the camera is actually at
-  hotspotEls = new Map();
   labelEls = new Map();
   headerEl = null;
   cursorEl = null;
@@ -25,11 +24,6 @@ export class GalleryStore {
 
   snap() {
     this.smooth = this.target;
-  }
-
-  setHotspot(id, el) {
-    if (el) this.hotspotEls.set(id, el);
-    else this.hotspotEls.delete(id);
   }
 
   setLabel(id, el) {

@@ -18,7 +18,7 @@ import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import lightmaps from "./data/lightmaps.json";
 import { frame, measureGallery } from "./framing";
-import { BRIGHT_FROM, FOV, HOTSPOTS, LABELS, samplePath, setFraming, VAULT } from "./path";
+import { BRIGHT_FROM, FOV, LABELS, samplePath, setFraming, VAULT } from "./path";
 import { useGallery } from "./store";
 import { VaultFx } from "./vault";
 import styles from "./gallery.module.css";
@@ -93,16 +93,7 @@ function prepareGallery(scene, lmTextures, [envA, envB], gl) {
 
 const tmpPos = new Vector3();
 const tmpTarget = new Vector3();
-const tmpProj = new Vector3();
 const tmpShift = [0, 0];
-
-function placeAt(el, pos, camera, size) {
-  tmpProj.set(pos[0], pos[1], pos[2]).project(camera);
-  const x = ((tmpProj.x + 1) / 2) * size.width;
-  const y = ((1 - tmpProj.y) / 2) * size.height;
-  el.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
-  return tmpProj.z < 1;
-}
 
 /** Lens shift: keeps the work centred in the part of the screen the caption leaves clear. */
 function shiftLens(camera, size, sx, sy) {
@@ -125,15 +116,6 @@ function syncFrame(store, camera, size, dt, flags) {
   camera.updateMatrixWorld();
   shiftLens(camera, size, sx, sy);
 
-  for (const h of HOTSPOTS) {
-    const el = store.hotspotEls.get(h.id);
-    if (!el) continue;
-    const fade = Math.max(0, Math.min(1, Math.min(p - h.range[0], h.range[1] - p) / 0.03));
-    const inFront = placeAt(el, h.pos, camera, size);
-    const o = inFront ? fade : 0;
-    el.style.opacity = String(o);
-    el.style.pointerEvents = o > 0.5 ? "auto" : "none";
-  }
   for (const l of LABELS) {
     const el = store.labelEls.get(l.id);
     if (!el) continue;

@@ -3,9 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { HOTSPOTS, LABELS, ROOMS } from "./path";
+import { LABELS, ROOMS } from "./path";
 import { useGallery } from "./store";
-import { CartIcon, ExpandIcon, EyeIcon, PlanIcon, SearchIcon, UserIcon } from "./icons";
+import { CartIcon, ExpandIcon, PlanIcon, SearchIcon, UserIcon } from "./icons";
 import styles from "./gallery.module.css";
 
 // each work's place in the walk, for the caption's "No. 04 / 17"
@@ -109,19 +109,6 @@ export function StageOverlay() {
         <span className={styles.frameLeft} />
         <span className={styles.frameRight} />
       </div>
-
-      {HOTSPOTS.map((h) => (
-        <button
-          key={h.id}
-          type="button"
-          className={styles.hotspot}
-          aria-label={h.label}
-          ref={(el) => store.setHotspot(h.id, el)}
-          onClick={() => go((h.range[0] + h.range[1]) / 2)}
-        >
-          <EyeIcon />
-        </button>
-      ))}
 
       {LABELS.map((l) => (
         <aside
