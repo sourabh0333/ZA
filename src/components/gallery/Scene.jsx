@@ -19,6 +19,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import lightmaps from "./data/lightmaps.json";
 import { frame, measureGallery } from "./framing";
 import { BRIGHT_FROM, FOV, LABELS, samplePath, setFraming, VAULT } from "./path";
+import People from "./People";
 import { useGallery } from "./store";
 import { VaultFx } from "./vault";
 import styles from "./gallery.module.css";
@@ -146,6 +147,7 @@ function Gallery({ onReady }) {
   const baked = useMemo(() => prepareGallery(gltf.scene, lmTextures, envs, gl), [gltf, lmTextures, envs, gl]);
   const vault = useMemo(() => (VAULT ? VaultFx.for(gltf.scene) : null), [gltf]);
   const store = useGallery();
+  const [visitors, setVisitors] = useState(false);
   useFraming(gltf.scene, store);
   useFrame((_, dt) => vault?.update(store.smooth, dt));
 
@@ -158,7 +160,17 @@ function Gallery({ onReady }) {
     <>
       <primitive object={gltf.scene} />
       {baked === 0 && <PreviewLights />}
-      <Ready onReady={onReady} />
+      <Ready
+        onReady={() => {
+          onReady?.();
+          setVisitors(true);
+        }}
+      />
+      {visitors && (
+        <Suspense fallback={null}>
+          <People envs={envs} />
+        </Suspense>
+      )}
     </>
   );
 }
