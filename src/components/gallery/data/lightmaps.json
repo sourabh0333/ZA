@@ -1,0 +1,62 @@
+{
+ "floor_a": {
+  "file": "/gallery/lightmaps/floor_a.webp",
+  "intensity": 1.27142,
+  "env": "a",
+  "size": 1024
+ },
+ "walls_a": {
+  "file": "/gallery/lightmaps/walls_a.webp",
+  "intensity": 1.26183,
+  "env": "a",
+  "size": 1024
+ },
+ "library": {
+  "file": "/gallery/lightmaps/library.webp",
+  "intensity": 1.87168,
+  "env": "a",
+  "size": 1024
+ },
+ "furniture_a": {
+  "file": "/gallery/lightmaps/furniture_a.webp",
+  "intensity": 1.45661,
+  "env": "a",
+  "size": 1024
+ },
+ "floor_b": {
+  "file": "/gallery/lightmaps/floor_b.webp",
+  "intensity": 1.49381,
+  "env": "b",
+  "size": 1024
+ },
+ "walls_b": {
+  "file": "/gallery/lightmaps/walls_b.webp",
+  "intensity": 3.38402,
+  "env": "b",
+  "size": 1024
+ },
+ "vault": {
+  "file": "/gallery/lightmaps/vault.webp",
+  "intensity": 1.48283,
+  "env": "b",
+  "size": 512
+ },
+ "furniture_b": {
+  "file": "/gallery/lightmaps/furniture_b.webp",
+  "intensity": 2.39134,
+  "env": "b",
+  "size": 1024
+ },
+ "room": {
+  "file": "/gallery/lightmaps/room.webp",
+  "intensity": 1.60645,
+  "env": "a",
+  "size": 1024
+ },
+ "art": {
+  "file": "/gallery/lightmaps/art.webp",
+  "intensity": 1.91834,
+  "env": "a",
+  "size": 1024
+ }
+}
