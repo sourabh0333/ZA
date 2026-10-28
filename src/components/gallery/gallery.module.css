@@ -583,7 +583,120 @@
     font-size: 17px;
   }
 
+  /* several works: side by side, in the order the camera passes them */
+  .caption:not([data-count="1"]) {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    column-gap: 12px;
+    padding: 12px 14px 14px;
+  }
+
+  .caption:not([data-count="1"]) .captionWork + .captionWork {
+    margin-top: 0;
+    padding-top: 0;
+    padding-left: 12px;
+    border-top: 0;
+    border-left: 1px solid rgb(244 239 231 / 0.12);
+  }
+
+  .caption:not([data-count="1"]) .captionIndex {
+    margin-bottom: 5px;
+    letter-spacing: 0.14em;
+  }
+
+  .caption:not([data-count="1"]) .captionIndex {
+    white-space: nowrap;
+  }
+
+  .caption:not([data-count="1"]) .captionIndex::after,
+  .caption:not([data-count="1"]) .captionIndex span {
+    display: none;
+  }
+
+  .caption:not([data-count="1"]) .captionTitle {
+    font-size: 14px;
+  }
+
+  .caption:not([data-count="1"]) .captionArtist {
+    margin-top: 2px;
+    font-size: 11px;
+  }
+
   .caption:not([data-count="1"]) .captionMeta {
     display: none;
+  }
+}
+
+/* touch screens: the hotspots need a finger-sized target */
+@media (pointer: coarse) {
+  .hotspot {
+    width: 38px;
+    height: 38px;
+  }
+
+  .hotspot svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cornerButton {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* a phone on its side: little height, so a slimmer header and caption */
+@media (orientation: landscape) and (max-height: 560px) {
+  .logoImage {
+    height: 34px;
+  }
+
+  .caption {
+    bottom: 50px;
+    width: min(250px, 34vw);
+    padding: 11px 13px 13px;
+  }
+
+  .captionIndex {
+    margin-bottom: 6px;
+  }
+
+  .captionIndex::after {
+    display: none;
+  }
+
+  .captionTitle,
+  .caption:not([data-count="1"]) .captionTitle {
+    font-size: 14px;
+  }
+
+  .captionArtist {
+    margin-top: 2px;
+    font-size: 11px;
+  }
+
+  .captionMeta {
+    display: none;
+  }
+
+  .captionWork + .captionWork,
+  .caption:not([data-count="1"]) .captionWork + .captionWork {
+    margin-top: 7px;
+    padding-top: 7px;
+  }
+
+  .caption:not([data-count="1"]) {
+    display: block;
+  }
+
+  .caption:not([data-count="1"]) .captionWork + .captionWork {
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid rgb(244 239 231 / 0.12);
+  }
+
+  .caption:not([data-count="1"]) .captionIndex {
+    margin-bottom: 3px;
   }
 }

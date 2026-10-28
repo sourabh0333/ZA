@@ -56,3 +56,10 @@ far enough back to fit it with a margin, and `hold` keeps it there for a stretch
 of scroll while it drifts slightly. The walk's length (`WALK`), the Rooms menu
 stops and the point where the rooms turn light are written to `path.json` too,
 so the site's scroll height and menu follow any change to the path.
+
+The path is composed for a 4:3 screen. On portrait screens, phones on their
+side and tablets, the site refits it (`src/components/gallery/framing.js`):
+it widens the lens, steps the camera back (never through a wall) until each
+work fits the part of the screen the caption leaves clear, and pans along a
+group of works the room is too small to take in at once. Desktop views are
+used exactly as designed.

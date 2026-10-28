@@ -41,14 +41,30 @@ function monotone(xs, ys) {
   };
 }
 
-const keys = pathData.keys;
-const positions = new CatmullRomCurve3(keys.map((k) => new Vector3(...k.pos)), false, "centripetal");
-const targets = new CatmullRomCurve3(keys.map((k) => new Vector3(...k.target)), false, "centripetal");
 const remap = monotone(
-  keys.map((k) => k.p),
-  keys.map((_, i) => i / (keys.length - 1)),
+  pathData.keys.map((k) => k.p),
+  pathData.keys.map((_, i) => i / (pathData.keys.length - 1)),
 );
 
+function curves(keys) {
+  return {
+    positions: new CatmullRomCurve3(keys.map((k) => new Vector3(...k.pos)), false, "centripetal"),
+    targets: new CatmullRomCurve3(keys.map((k) => new Vector3(...k.target)), false, "centripetal"),
+  };
+}
+
+// The path as designed (for a 4:3 screen); framing.js swaps in a copy fitted
+// to the screen the site is on, with a lens shift per key.
+let path = curves(pathData.keys);
+let shifts = null;
+
+/** Replaces the camera positions (same keys, same timing) and the per-key lens shift [x, y] in px. */
+export function setFraming(keys, keyShifts) {
+  path = curves(keys);
+  shifts = keyShifts;
+}
+
+export const KEYS = pathData.keys;
 export const FOV = pathData.fov;
 export const WALK = pathData.walk; // the walk's length; the hero's scroll height scales with it
 export const BRIGHT_FROM = pathData.brightFrom; // where the rooms turn light (the nav tab appears)
@@ -57,8 +73,21 @@ export const HOTSPOTS = pathData.hotspots;
 export const LABELS = pathData.labels; // wall labels: who made each work, shown while the camera holds on it
 export const VAULT = pathData.vault;
 
-export function samplePath(progress, outPos, outTarget) {
+/** Camera position and target at a scroll progress; returns the lens shift [x, y] in px. */
+export function samplePath(progress, outPos, outTarget, outShift) {
   const t = remap(Math.min(1, Math.max(0, progress)));
-  positions.getPoint(t, outPos);
-  targets.getPoint(t, outTarget);
+  path.positions.getPoint(t, outPos);
+  path.targets.getPoint(t, outTarget);
+  if (!shifts) {
+    outShift[0] = outShift[1] = 0;
+    return outShift;
+  }
+  // eased between keys, so the shift settles while the camera holds on a work
+  const f = t * (shifts.length - 1);
+  const i = Math.min(shifts.length - 2, Math.floor(f));
+  const u = f - i;
+  const s = u * u * (3 - 2 * u);
+  outShift[0] = shifts[i][0] + (shifts[i + 1][0] - shifts[i][0]) * s;
+  outShift[1] = shifts[i][1] + (shifts[i + 1][1] - shifts[i][1]) * s;
+  return outShift;
 }

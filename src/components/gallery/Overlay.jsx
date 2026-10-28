@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { HOTSPOTS, LABELS, ROOMS } from "./path";
 import { useGallery } from "./store";
 import { CartIcon, ExpandIcon, EyeIcon, PlanIcon, SearchIcon, UserIcon } from "./icons";
@@ -10,6 +10,10 @@ import styles from "./gallery.module.css";
 
 // each work's place in the walk, for the caption's "No. 04 / 17"
 const WORK_NUMBER = new Map(LABELS.flatMap((l) => l.works).map((w, i) => [w.title, i + 1]));
+
+const noSubscribe = () => () => {};
+// iPhone Safari (and some in-app browsers) cannot take a page fullscreen
+const canFullscreen = () => Boolean(document.fullscreenEnabled);
 
 // menu items carried over from the previous zigguratss.com site
 const PRIMARY_LINKS = [
@@ -74,6 +78,7 @@ export function StageOverlay() {
   const store = useGallery();
   const [roomsOpen, setRoomsOpen] = useState(false);
   const roomsRef = useRef(null);
+  const fullscreen = useSyncExternalStore(noSubscribe, canFullscreen, () => false);
 
   useEffect(() => {
     if (!roomsOpen) return undefined;
@@ -172,9 +177,11 @@ export function StageOverlay() {
         </ul>
       </div>
 
-      <button type="button" className={styles.cornerButton} onClick={toggleFullscreen} aria-label="Toggle fullscreen">
-        <ExpandIcon />
-      </button>
+      {fullscreen && (
+        <button type="button" className={styles.cornerButton} onClick={toggleFullscreen} aria-label="Toggle fullscreen">
+          <ExpandIcon />
+        </button>
+      )}
 
       <span className={styles.cursor} ref={(el) => store.setCursor(el)} aria-hidden="true" />
     </div>
