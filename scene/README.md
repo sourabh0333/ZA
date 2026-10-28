@@ -63,3 +63,29 @@ it widens the lens, steps the camera back (never through a wall) until each
 work fits the part of the screen the caption leaves clear, and pans along a
 group of works the room is too small to take in at once. Desktop views are
 used exactly as designed.
+
+## Visitors
+
+The people standing and sitting in the rooms are Microsoft Rocketbox avatars
+(MIT, see `public/gallery/people/LICENSE.txt`), each playing a motion-captured
+idle clip. They are not part of the Blender build: `scene/people/` turns them
+into small glTF files with Node, Python (Pillow) and a headless browser
+(Playwright), no Blender needed.
+
+```bash
+# the cast's avatars and clips only (the full library is several GB)
+git clone --depth 1 --filter=blob:none --sparse https://github.com/microsoft/Microsoft-Rocketbox rocketbox
+git -C rocketbox sparse-checkout set --no-cone \
+  '/Assets/Avatars/Adults/<avatar>/Export/<avatar>.fbx' '/Assets/Avatars/Adults/<avatar>/Textures/*.tga' \
+  '/Assets/Animations/all_animations_max_motextr_static/<clip>.max.fbx'   # one pair per cast.json entry
+python3 scene/people/textures.py rocketbox/Assets
+node scene/people/bake.mjs rocketbox/Assets
+```
+
+`cast.json` says which avatar and clip each visitor is; `bake.mjs` writes
+`public/gallery/people/<id>.glb` (about 8k triangles and 600 KB each). Where
+they stand, what they look at and how they are lit is set on the website, in
+`src/components/gallery/visitors.js`: nobody stands between the camera and a
+work it stops at, and the phone framing keeps its camera clear of them. The
+site loads them only once the rooms are on screen.
+

@@ -1,0 +1,11 @@
+{
+  "_": "Who stands in the gallery: a Rocketbox avatar and the idle clip it plays. Where each one stands is in src/components/gallery/visitors.js.",
+  "people": [
+    { "id": "textile", "avatar": "Female_Adult_14", "anim": "f_idle_neutral_02" },
+    { "id": "elder", "avatar": "Male_Adult_03", "anim": "m_idle_neutral_02" },
+    { "id": "cardigan", "avatar": "Female_Adult_09", "anim": "f_idle_neutral_01" },
+    { "id": "blazer", "avatar": "Male_Adult_07", "anim": "m_idle_neutral_03" },
+    { "id": "stairs", "avatar": "Male_Adult_02", "anim": "m_sit_chair_idle_relaxed_01" },
+    { "id": "hall", "avatar": "Female_Adult_07", "anim": "f_idle_neutral_04" }
+  ]
+}

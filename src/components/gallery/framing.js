@@ -1,5 +1,6 @@
 import { Box3, MathUtils, Raycaster, Vector3 } from "three";
 import { FOV, KEYS, LABELS } from "./path";
+import { PEOPLE, PERSON_RADIUS } from "./visitors";
 
 // The camera path is composed for a 4:3 screen (see art_view in
 // scene/build_scene.py): about 31 degrees either side of the view. A phone held
@@ -64,8 +65,23 @@ function clearance(gallery, pos, target) {
     ray.set(origin, back);
     const hit = ray.intersectObjects(gallery.solids, false)[0];
     if (hit) free = Math.min(free, hit.distance);
+    free = Math.min(free, toPeople(origin, back));
   }
   return Math.max(0, free - WALL_GAP);
+}
+
+/** Distance along a level ray to the first visitor it would walk into (visitors.js), or Infinity. */
+function toPeople(o, dir) {
+  let near = Infinity;
+  for (const { pos } of PEOPLE) {
+    const fx = o.x - pos[0];
+    const fz = o.z - pos[2];
+    const b = fx * dir.x + fz * dir.z;
+    const disc = b * b - (fx * fx + fz * fz - PERSON_RADIUS * PERSON_RADIUS);
+    const t = -b - Math.sqrt(Math.max(0, disc));
+    if (disc >= 0 && t >= 0) near = Math.min(near, t);
+  }
+  return near;
 }
 
 /** How far back from target (horizontally) the camera must stand for box to fill the clear area. */
