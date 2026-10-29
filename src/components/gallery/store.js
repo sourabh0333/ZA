@@ -6,7 +6,7 @@ import { createContext, useContext } from "react";
 export class GalleryStore {
   target = 0; // scroll progress the user asked for (0..1)
   smooth = 0; // damped progress the camera is actually at
-  labelEls = new Map();
+  workEls = new Map();
   headerEl = null;
   cursorEl = null;
   scroller = null;
@@ -26,9 +26,9 @@ export class GalleryStore {
     this.smooth = this.target;
   }
 
-  setLabel(id, el) {
-    if (el) this.labelEls.set(id, el);
-    else this.labelEls.delete(id);
+  setWork(id, el) {
+    if (el) this.workEls.set(id, el);
+    else this.workEls.delete(id);
   }
 
   setHeader(el) {

@@ -377,6 +377,16 @@ G_FLOOR_B, G_WALL_B, G_VAULT, G_FURN_B = "floor_b", "walls_b", "vault", "furnitu
 # the black volume runs 4 m past the vault before the beige room begins
 DU = 2.25                # how far the beige room sits beyond the first layout
 ROOM_U1 = 16.5 + DU      # beige room's far (right) wall
+# The stairs: seven steps along the art wall to a landing in the far corner,
+# then a second flight along the right wall, up through an opening in the
+# ceiling into the rooftop hall. Twenty risers reach the hall floor.
+RISE, RUN, STAIR_W, FLIGHT2_W = 0.1975, 0.3, 2.2, 1.5
+FLIGHT1, FLIGHT2 = 7, 12
+LAND_U0 = ROOM_U1 - FLIGHT2_W            # landing and second flight: u LAND_U0..ROOM_U1
+STEP_U0 = LAND_U0 - FLIGHT1 * RUN
+STAIR_V0 = 5.6 - STAIR_W                 # the first flight's open edge (the art wall is at v 5.6)
+FLIGHT2_V1 = STAIR_V0 - FLIGHT2 * RUN    # where the second flight meets the hall floor
+ROOF_Z = (FLIGHT1 + 1 + FLIGHT2) * RISE  # the hall floor, 3.95 m up
 
 # (stops at v 5.8, just behind the art wall, so it never pokes up through the
 # side room's floor)
@@ -386,8 +396,12 @@ box("FloorB", G_FLOOR_B, M["oak_floor"], (17.5 + DU, 11.3, 0.1), (7.5 + DU / 2, 
 CEIL_SPLIT = 6.8 + DU
 box("CeilingB", G_WALL_B, M["ceiling_wood"], (CEIL_SPLIT + 1.5, 10.6, 0.2), ((CEIL_SPLIT - 1.5) / 2, 0.3, H_B),
     frame=FB, tile=2.0)
-box("CeilingBeige", G_WALL_B, M["ceiling_dark"], (ROOM_U1 - CEIL_SPLIT + 0.2, 10.6, 0.2), ((CEIL_SPLIT + ROOM_U1 + 0.2) / 2, 0.3, H_B),
+box("CeilingBeige", G_WALL_B, M["ceiling_dark"], (LAND_U0 - CEIL_SPLIT, 10.6, 0.2), ((CEIL_SPLIT + LAND_U0) / 2, 0.3, H_B),
     frame=FB, tile=2.0)
+# (either side of the opening the second flight climbs through)
+for i, (v0, v1) in enumerate(((-5.0, FLIGHT2_V1), (STAIR_V0, 5.6))):
+    box(f"CeilingBeigeEnd{i}", G_WALL_B, M["ceiling_dark"], (ROOM_U1 + 0.2 - LAND_U0, v1 - v0, 0.2),
+        ((LAND_U0 + ROOM_U1 + 0.2) / 2, (v0 + v1) / 2, H_B), frame=FB, tile=2.0)
 box("Bulkhead", G_WALL_B, M["ceiling_dark"], (0.7, 10.6, 0.45), (CEIL_SPLIT + 0.35, 0.3, H_B - 0.45), frame=FB, tile=2.0)
 STRIPS_U = [-0.4, 1.6, 3.6, 5.6, 7.6]
 for i, u in enumerate(STRIPS_U):
@@ -580,16 +594,150 @@ bmesh.ops.transform(bm, matrix=FB @ Matrix.Translation((LAMP[0], LAMP[1], LAMP[2
 finish(bm, "LampShade", G_FURN_B, [M["lamp_shade"]], 0.5)
 point("LampLight", B(LAMP[0], LAMP[1], LAMP[2] + 0.29), 18, k=2700, radius=0.12)
 
-# wide oak stairs rising along the art wall
+# wide oak stairs rising along the art wall, turning at a landing in the far
+# corner and climbing the right wall to the roof (the layout is set with ROOM_U1)
 # (about three wall-wash scallops of bare wall between the lamp and the stairs)
-STEPS, RISE, RUN, STAIR_W = 12, 0.19, 0.3, 2.2
-STEP_U0 = ROOM_U1 - STEPS * RUN
-for k in range(STEPS):
+for k in range(FLIGHT1):
     u = STEP_U0 + k * RUN
-    box(f"Step{k}", G_FURN_B, M["oak"], (ROOM_U1 - u, STAIR_W, RISE), ((u + ROOM_U1) / 2, ART_V - STAIR_W / 2, k * RISE),
+    box(f"Step{k}", G_FURN_B, M["oak"], (LAND_U0 - u, STAIR_W, RISE), ((u + LAND_U0) / 2, ART_V - STAIR_W / 2, k * RISE),
         frame=FB, tile=1.5)
-box("StairStringer", G_FURN_B, M["plaster_beige"], (ROOM_U1 - STEP_U0, 0.08, 0.02),
-    ((STEP_U0 + ROOM_U1) / 2, ART_V - STAIR_W - 0.02, 0.0), frame=FB)
+box("StairStringer", G_FURN_B, M["plaster_beige"], (LAND_U0 - STEP_U0, 0.08, 0.02),
+    ((STEP_U0 + LAND_U0) / 2, ART_V - STAIR_W - 0.02, 0.0), frame=FB)
+# the landing and the second flight sit on a solid plinth along the right wall
+LAND_Z = (FLIGHT1 + 1) * RISE
+box("StairLanding", G_FURN_B, M["plaster_beige"], (FLIGHT2_W, STAIR_W, LAND_Z - 0.03), ((LAND_U0 + ROOM_U1) / 2, ART_V - STAIR_W / 2, 0.0),
+    frame=FB, tile=2.5)
+box("StairLandingTop", G_FURN_B, M["oak"], (FLIGHT2_W, STAIR_W, 0.03), ((LAND_U0 + ROOM_U1) / 2, ART_V - STAIR_W / 2, LAND_Z - 0.03),
+    frame=FB, tile=1.5)
+box("Flight2Base", G_FURN_B, M["plaster_beige"], (FLIGHT2_W, STAIR_V0 - FLIGHT2_V1, LAND_Z), ((LAND_U0 + ROOM_U1) / 2,
+    (STAIR_V0 + FLIGHT2_V1) / 2, 0.0), frame=FB, tile=2.5)
+for j in range(FLIGHT2):
+    v1 = STAIR_V0 - j * RUN
+    box(f"Step2_{j}", G_FURN_B, M["oak"], (FLIGHT2_W, v1 - FLIGHT2_V1, RISE), ((LAND_U0 + ROOM_U1) / 2, (v1 + FLIGHT2_V1) / 2,
+        LAND_Z + j * RISE), frame=FB, tile=1.5)
+# a slim black handrail along the second flight's open side
+RAIL_H = 0.9
+for j in (0, 4, 8, FLIGHT2 - 1):
+    # a post at the middle of step j, standing on its tread
+    cylinder(f"RailPost{j}", G_FURN_B, M["black_matte"], 0.015, RAIL_H,
+             FB @ Matrix.Translation((LAND_U0 + 0.06, STAIR_V0 - (j + 0.5) * RUN, LAND_Z + (j + 1) * RISE)), segments=10)
+rail_a = B(LAND_U0 + 0.06, STAIR_V0 - 0.5 * RUN, LAND_Z + RISE + RAIL_H)
+rail_b = B(LAND_U0 + 0.06, STAIR_V0 - (FLIGHT2 - 0.5) * RUN, ROOF_Z + RAIL_H)
+rail_d = rail_b - rail_a
+cylinder("Handrail", G_FURN_B, M["black_matte"], 0.02, rail_d.length,
+         Matrix.Translation(rail_a) @ rail_d.to_track_quat("Z", "Y").to_matrix().to_4x4(), segments=12)
+
+# ============================================================ rooftop hall
+# A 20 x 10.6 m gallery on the roof of frame B, reached by the stairs: white
+# walls, a 6 m ceiling with deep beams and a luminous panel, a polished floor,
+# two freestanding walls, and along its south side a glass wall onto a
+# terrace and a city skyline at dusk.
+print("[build] rooftop hall")
+G_ROOF, G_SKY = "roof", "sky"
+HALL_U0, HALL_U1, HALL_V0, HALL_V1 = -1.25, ROOM_U1, -5.0, 5.6
+HALL_TOP = ROOF_Z + 6.0
+SLAB_Z0 = 3.82   # the slab's underside sits inside the ceilings below, so they never flicker
+mk("plaster_white", T.write_set("plaster_white", T.tinted_albedo("clay_plaster", (1.0, 0.985, 0.96), contrast=0.25, sat=0.05,
+                                                                   target=0.62),
+                                T.roughness("clay_plaster", 1.0, 0.05), T.normal("clay_plaster")),
+   normal_strength=0.12, web={"env": 0.1})
+mk("concrete_polished", T.write_set("concrete_polished", T.tinted_albedo("smooth_concrete_floor", (0.92, 0.9, 0.87), contrast=0.6,
+                                                                         sat=0.2, target=0.3),
+                                    T.roughness("smooth_concrete_floor", 0.45, 0.05), T.normal("smooth_concrete_floor")),
+   normal_strength=0.2, web={"env": 0.9})
+mk("luminous", None, color=(1, 1, 1), rough=0.5, emission=(1.0, 0.96, 0.9), emission_strength=5.0,
+   web={"env": 0.0, "emissive": True})
+
+
+def roof_box(name, mat, u0, u1, v0, v1, z0, z1, grp=G_ROOF, tile=2.0, bevel=0.0):
+    return box(name, grp, mat, (u1 - u0, v1 - v0, z1 - z0), ((u0 + u1) / 2, (v0 + v1) / 2, z0), frame=FB, tile=tile, bevel=bevel)
+
+
+# floor, round the stair opening
+roof_box("HallFloor", M["concrete_polished"], HALL_U0, LAND_U0, HALL_V0, HALL_V1, SLAB_Z0, ROOF_Z, tile=3.0)
+roof_box("HallFloorS", M["concrete_polished"], LAND_U0, HALL_U1, HALL_V0, FLIGHT2_V1, SLAB_Z0, ROOF_Z, tile=3.0)
+roof_box("HallFloorN", M["concrete_polished"], LAND_U0, HALL_U1, STAIR_V0, HALL_V1, SLAB_Z0, ROOF_Z, tile=3.0)
+# a low white upstand round the opening (open on the side the stairs arrive)
+roof_box("VoidGuardW", M["plaster_white"], LAND_U0 - 0.14, LAND_U0, FLIGHT2_V1 + 0.6, STAIR_V0 + 0.14, ROOF_Z, ROOF_Z + 1.05)
+roof_box("VoidGuardN", M["plaster_white"], LAND_U0 - 0.14, HALL_U1, STAIR_V0, STAIR_V0 + 0.14, ROOF_Z, ROOF_Z + 1.05)
+# walls: north (the long art wall), west (the end wall), east (down to the beige
+# room's ceiling, so the stairwell is closed)
+wall_quad("HallNorth", G_ROOF, M["plaster_white"], B2(HALL_U1, HALL_V1), B2(HALL_U0, HALL_V1), SLAB_Z0, HALL_TOP, angle=B_ANGLE,
+          tile=3.0)
+wall_quad("HallWest", G_ROOF, M["plaster_white"], B2(HALL_U0, HALL_V1), B2(HALL_U0, HALL_V0 - 4.5), SLAB_Z0, HALL_TOP,
+          angle=B_ANGLE, tile=3.0)
+wall_quad("HallEast", G_ROOF, M["plaster_white"], B2(HALL_U1, HALL_V0 - 4.5), B2(HALL_U1, HALL_V1), H_B, HALL_TOP,
+          angle=B_ANGLE, tile=3.0)
+# ceiling, with deep beams across the hall and a luminous panel between them
+roof_box("HallCeiling", M["plaster_white"], HALL_U0, HALL_U1, HALL_V0 - 0.3, HALL_V1, HALL_TOP, HALL_TOP + 0.2)
+BEAMS_U = [3.25, 9.75, 16.25]
+for i, u in enumerate(BEAMS_U):
+    roof_box(f"HallBeam{i}", M["plaster_white"], u - 0.15, u + 0.15, HALL_V0, HALL_V1, HALL_TOP - 0.6, HALL_TOP)
+roof_box("HallSkyPanel", M["luminous"], 0.4, 17.4, -2.2, 2.8, HALL_TOP - 0.02, HALL_TOP, grp=G_SKY)
+# the glass wall: slim black mullions every two metres, a head beam and a sill
+GLASS_V = HALL_V0
+for i in range(11):
+    u = HALL_U0 + 0.04 + i * (HALL_U1 - HALL_U0 - 0.08) / 10
+    roof_box(f"Mullion{i}", M["steel_black"], u - 0.04, u + 0.04, GLASS_V - 0.08, GLASS_V + 0.08, ROOF_Z, HALL_TOP, tile=1.0)
+roof_box("GlassHead", M["plaster_white"], HALL_U0, HALL_U1, GLASS_V - 0.3, GLASS_V + 0.1, HALL_TOP - 0.45, HALL_TOP)
+roof_box("GlassTransom", M["steel_black"], HALL_U0, HALL_U1, GLASS_V - 0.06, GLASS_V + 0.06, ROOF_Z + 3.4, ROOF_Z + 3.46, tile=1.0)
+roof_box("GlassSill", M["steel_black"], HALL_U0, HALL_U1, GLASS_V - 0.08, GLASS_V + 0.08, ROOF_Z, ROOF_Z + 0.05, tile=1.0)
+# the terrace beyond the glass: an oak deck and a white parapet
+TERRACE_V0 = HALL_V0 - 4.5
+roof_box("TerraceDeck", M["oak_floor"], HALL_U0, HALL_U1, TERRACE_V0, HALL_V0, SLAB_Z0, ROOF_Z, tile=2.2)
+roof_box("Parapet", M["plaster_white"], HALL_U0, HALL_U1, TERRACE_V0 - 0.25, TERRACE_V0, SLAB_Z0, ROOF_Z + 1.1)
+# two freestanding walls down the middle, each carrying a large canvas
+PARTS = [(4.0, 8.0), (11.0, 15.0)]
+PART_V0, PART_V1, PART_H = 0.45, 0.75, 3.6
+for i, (u0, u1) in enumerate(PARTS):
+    roof_box(f"Partition{i}", M["plaster_white"], u0, u1, PART_V0, PART_V1, ROOF_Z, ROOF_Z + PART_H)
+# sculptures on white plinths along the glass, and an oak bench facing the view
+SCULPT_V = HALL_V0 + 1.1
+for i, u in enumerate((4.5, 9.5, 15.0)):
+    roof_box(f"Plinth{i}", M["plaster_white"], u - 0.35, u + 0.35, SCULPT_V - 0.35, SCULPT_V + 0.35, ROOF_Z, ROOF_Z + 0.85,
+             tile=1.0)
+top = ROOF_Z + 0.85
+# a polished black monolith, softly rounded
+roof_box("Monolith", M["steel_black"], 4.5 - 0.2, 4.5 + 0.2, SCULPT_V - 0.13, SCULPT_V + 0.13, top, top + 1.55, tile=1.0, bevel=0.06)
+# three river stones, balanced
+for k, (r, sz, dz, mat) in enumerate(((0.32, 0.55, 0.0, "marble_green"), (0.26, 0.5, 0.33, "terrazzo_dark"),
+                                       (0.18, 0.55, 0.6, "stone_light"))):
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=40, v_segments=20, radius=1.0)
+    for f in bm.faces:
+        f.smooth = True
+    bmesh.ops.transform(bm, matrix=FB @ Matrix.Translation((9.5 + 0.03 * k, SCULPT_V, top + dz + r * sz))
+                        @ Matrix.Diagonal((r, r * 0.92, r * sz, 1)), verts=bm.verts)
+    finish(bm, f"Stone{k}", G_ROOF, [M[mat]], 0.6)
+# a bronze ring standing on edge
+ring_m = FB @ Matrix.Translation((15.0, SCULPT_V, top + 0.72)) @ Matrix.Rotation(math.radians(90), 4, "X")
+torus("BronzeRing", G_ROOF, M["brass"], 0.6, 0.11, ring_m, seg=96, ring=24)
+roof_box("RingFoot", M["steel_black"], 15.0 - 0.22, 15.0 + 0.22, SCULPT_V - 0.12, SCULPT_V + 0.12, top, top + 0.04, tile=1.0)
+roof_box("RoofBench", M["oak"], 10.9, 13.5, HALL_V0 + 1.0, HALL_V0 + 1.55, ROOF_Z, ROOF_Z + 0.44, tile=1.2, bevel=0.015)
+# the city at dusk: an emissive skyline far beyond the terrace, wide enough
+# that the glass never shows past its ends (the texture repeats along it)
+city_mat = bpy.data.materials.new("city")
+city_mat.use_nodes = True
+cnt = city_mat.node_tree
+cbsdf = cnt.nodes["Principled BSDF"]
+cbsdf.inputs["Base Color"].default_value = (0, 0, 0, 1)
+cbsdf.inputs["Roughness"].default_value = 1.0
+city_tex = cnt.nodes.new("ShaderNodeTexImage")
+city_tex.image = bpy.data.images.load(T.write_set("city", T.city_night())["albedo"])
+cnt.links.new(city_tex.outputs["Color"], cbsdf.inputs["Emission Color"])
+cbsdf.inputs["Emission Strength"].default_value = 2.5
+city_mat["web"] = {"env": 0.0, "emissive": True}
+CITY_V, CITY_U0, CITY_U1, CITY_Z0, CITY_Z1, CITY_TILES = -45.0, -380.0, 400.0, -50.0, 120.0, 6
+city_me = bpy.data.meshes.new("CitySkyline")
+city_me.from_pydata([tuple(B(u, CITY_V, z)) for u, z in ((CITY_U0, CITY_Z0), (CITY_U1, CITY_Z0), (CITY_U1, CITY_Z1),
+                                                          (CITY_U0, CITY_Z1))], [], [(0, 1, 2, 3)])
+city_me.materials.append(city_mat)
+city_uv = city_me.uv_layers.new(name="UVMap")
+for li, uv in zip(range(4), ((0, 0), (CITY_TILES, 0), (CITY_TILES, 1), (0, 1))):
+    city_uv.data[li].uv = uv
+city_ob = bpy.data.objects.new("CitySkyline", city_me)
+scene.collection.objects.link(city_ob)
+link(city_ob, G_SKY)
 
 # ================================================================== artworks
 # 30 works (scene/lib/collection.py says what hangs where and why). Each wall is
@@ -618,7 +766,16 @@ WALLS = {
     "vault_back": (B2(0.0, CH_V1), U_DIR, CH_Z1),
     # the volume's beige end in the last room; its spot hangs under the bulkhead
     "beige_x": (B2(VX1, 0.0), V_DIR, H_B - 0.45),
+    # the rooftop hall: the long north wall, the west end wall, and the south
+    # faces of the two freestanding walls
+    "hall_n": (B2(HALL_U0, HALL_V1), U_DIR, HALL_TOP),
+    "hall_w": (B2(HALL_U0, HALL_V0), V_DIR, HALL_TOP),
+    "part_1": (B2(PARTS[0][0], PART_V0), U_DIR, HALL_TOP),
+    "part_2": (B2(PARTS[1][0], PART_V0), U_DIR, HALL_TOP),
 }
+HALL_WALLS = {"hall_n", "hall_w", "part_1", "part_2"}
+# floor level under each wall (the hall is on the roof); everywhere else 0
+WALL_FLOOR = {w: ROOF_Z for w in HALL_WALLS}
 # the grid of works on paper shares one oak; the float frames are blackened wood
 mk("mat_board", None, color=(0.78, 0.76, 0.72), rough=0.95, web={"env": 0.05})
 FRAME_MAT = {"black": M["black_wood"], "oak": M["oak"]}
@@ -715,6 +872,8 @@ def hang(wid, wall, s, zc, W, H, style, pal, seed, mount):
 
 
 for w in WORKS:
+    # the hall's works have their own lightmap
+    G_ART = "art_roof" if w[1] in HALL_WALLS else "art"
     hang(*w)
 
 def place_model(path, name, grp, matrix):
@@ -858,7 +1017,8 @@ spot("ArtFocus", B(8.7 + DU, 2.6, H_B - 0.05), B(8.7 + DU, ART_V, 1.42), 60, 30,
 # 30 degrees off vertical, the museum standard that keeps glare off the surface
 ACCENT_W = 220          # watts at 2.4 m; scaled with distance so every work reads alike
 CAN_GROUP = {"pier": G_WALL_A, "corr_s": G_WALL_A, "curtain": G_WALL_A, "vol": G_WALL_B, "vol_w": G_WALL_B,
-             "beige": G_WALL_B, "beige_x": G_WALL_B, "vault_back": G_VAULT}
+             "beige": G_WALL_B, "beige_x": G_WALL_B, "vault_back": G_VAULT,
+             **{w: G_ROOF for w in HALL_WALLS}}
 accents = []
 for wid, wall, s_, zc, w, h, *_ in WORKS:
     if w > 2.2:     # the widest canvases take two overlapping beams
@@ -880,6 +1040,17 @@ for i, (wall, s_, zc, w, h) in enumerate(accents):
 area("FillB", B(10.5 + DU, 1.0, H_B - 0.05), B(10.5 + DU, 1.0, 0.0), 420, 6.0, 4.0, 3100, angle_z=B_ANGLE)
 area("FillB2", B(13.8 + DU, 0.5, H_B - 0.05), B(13.8 + DU, 0.5, 0.0), 250, 5.0, 5.0, 3100, angle_z=B_ANGLE)
 area("FillVault", B(3.2, -2.5, H_B - 0.05), B(3.2, -2.5, 0.0), 120, 4.0, 3.0, 3000, angle_z=B_ANGLE)
+# rooftop hall: daylight-white from the luminous ceiling, a narrow spot on each
+# sculpture, and the cool glow of the city through the glass
+area("HallSky", B(8.9, 0.3, HALL_TOP - 0.7), B(8.9, 0.3, ROOF_Z), 1800, 17.0, 5.0, 4300, angle_z=B_ANGLE)
+area("HallFillN", B(8.9, 3.6, HALL_TOP - 0.7), B(8.9, 3.6, ROOF_Z), 500, 17.0, 2.5, 3800, angle_z=B_ANGLE)
+for i, u in enumerate((4.5, 9.5, 15.0)):
+    spot(f"SculptSpot{i}", B(u, SCULPT_V + 1.6, HALL_TOP - 0.02), B(u, SCULPT_V, ROOF_Z + 1.3), 900, 24, 0.5, 3300, 0.03)
+    disk(f"SculptCan{i}", G_ROOF, M["emit_lens"], 0.035,
+         FB @ Matrix.Translation((u, SCULPT_V + 1.6, HALL_TOP - 0.001)) @ Matrix.Rotation(math.pi, 4, "X"), 16)
+area("CityGlow", B(8.9, HALL_V0 - 0.6, ROOF_Z + 2.6), B(8.9, 2.0, ROOF_Z + 1.0), 350, 18.0, 4.5, 7500, angle_z=B_ANGLE)
+area("TerraceGlow", B(8.9, HALL_V0 - 2.5, ROOF_Z + 3.5), B(8.9, HALL_V0 - 2.5, ROOF_Z), 120, 18.0, 4.0, 2700,
+     angle_z=B_ANGLE)
 
 scene.world = bpy.data.worlds.new("World")
 scene.world.use_nodes = True
@@ -889,105 +1060,113 @@ scene.world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.0
 print("[build] camera path")
 EYE = 1.55
 FOV = 50           # vertical field of view, degrees (Blender camera and website)
-# The walk stops at every work: the camera arrives square on to it, far enough
-# back that the whole work and a margin fill the view, and holds there for a
-# stretch of scroll while it drifts a few centimetres (so the stop never feels
-# frozen), before moving on. Times are written on a 0..WALK scale and divided
-# by WALK; the hero's scroll height grows with WALK (path.json "walk").
-WALK = 2.10
+# The walk passes square on to every work, far enough back that the whole work
+# and a margin fill the view, without stopping: each step lists the time since
+# the previous key. The walk's length (WALK) is the sum of the steps, and the
+# hero's scroll height grows with it (path.json "walk").
 HALF_V = math.radians(FOV / 2)
 HALF_H = math.radians(31)     # half the width of view on a fairly narrow (4:3) screen
 WORK_BY_ID = {w[0]: w for w in WORKS}
+MARGIN = 1.85                # the work fills about half the view, with wall around it
+
+
+def art_view(wid, d=None):
+    """Camera square on to a work: on its centre line, eye height, far enough
+    back that the work fills about half the view."""
+    _, wall, s_, zc, w, h, *_ = WORK_BY_ID[wid]
+    F = wall_frame(wall, s_)
+    d = d or max(h * MARGIN / 2 / math.tan(HALF_V), w * MARGIN / 2 / math.tan(HALF_H))
+    pos = F @ Vector((0, -d, 0))
+    return (pos.x, pos.y, EYE + WALL_FLOOR.get(wall, 0.0)), tuple(F @ Vector((0, 0, zc)))
+
+
+VAULT_VIEW = tuple(B(VAULT_U, CH_V1, 1.65))
+# (step, (pos, target), works framed by this key)
+STEPS = [
+    (0.00, ((-1.0, -0.4, EYE), (-0.7, 6.0, 1.38)), []),
+    (0.08, ((-0.5, -0.3, EYE), (-0.1, 6.0, 1.38)), []),
+    (0.12, ((4.0, 0.1, EYE), (5.4, 6.0, 1.42)), []),
+    (0.10, art_view("curtain"), ["curtain"]),
+    (0.08, art_view("pier"), ["pier"]),
+    # round the pier's corner into the corridor (whose far wall limits how far
+    # back the camera can stand for this work and the black wall's later)
+    (0.05, ((14.6, 5.3, EYE), art_view("corridor")[1]), []),
+    (0.04, art_view("corridor", d=2.8), ["corridor"]),
+    # through the doorway: the back wall's canvas, then each wall in turn
+    (0.05, ((ROOM_CX, 9.6, EYE), (ROOM_CX, RY1, 1.75)), []),
+    (0.05, art_view("centre", d=4.95), ["centre"]),
+    (0.06, ((17.25, 12.5, EYE), (RX0, 12.5, 1.7)), ["west_0", "west_1"]),
+    # (glance back at the centre so the view never swings through the camera)
+    (0.04, ((15.6, 12.4, EYE), (15.6, RY1, 1.7)), []),
+    (0.04, art_view("east"), ["east"]),
+    (0.06, ((15.12, 15.4, EYE), (15.12, RY0, 1.7)), ["door_l", "door_r"]),
+    # out through the doorway to the black volume's end wall
+    (0.06, ((ROOM_CX, 9.6, EYE), (14.8, 7.0, 1.5)), []),
+    (0.05, art_view("vol_w", d=2.3), ["vol_w"]),
+    # wide round the pier and the volume's corner into frame B
+    (0.05, ((14.9, 6.0, EYE), (13.4, 2.5, 1.5)), []),
+    (0.04, ((13.5, 4.3, EYE), (13.6, -1.0, 1.5)), []),
+    (0.06, art_view("vol_l"), ["vol_l"]),
+    # out past the open door's edge, then square on to the vault: the three
+    # gilded works fill the round opening
+    (0.04, (tuple(B(2.3, -4.6, EYE)), tuple(B(4.2, 3.6, 1.6))), []),
+    (0.05, (tuple(B(4.72, -4.5, EYE)), VAULT_VIEW), ["vault_l", "vault_c", "vault_r"]),
+    (0.06, art_view("vol_r"), ["vol_r"]),
+    # into the beige room: the volume's beige end, the sideboard, the blue field
+    (0.05, (tuple(B(10.2, -2.2, EYE)), tuple(B(10.0, 2.5, 1.6))), []),
+    (0.05, art_view("beige_x"), ["beige_x"]),
+    (0.06, (tuple(B(10.7, 0.6, EYE)), tuple(B(10.95, ART_V, 1.55))), []),
+    (0.07, art_view("beige_field"), ["beige_field"]),
+    # up the stairs: along the first flight, turn at the landing, climb the
+    # second flight through the ceiling into the rooftop hall
+    (0.05, (tuple(B(14.9, 2.3, EYE)), tuple(B(16.3, 4.3, 1.3))), []),
+    # (looking up toward the light coming down through the opening)
+    (0.05, (tuple(B(STEP_U0 + 0.55, 4.0, 2 * RISE + EYE)), tuple(B(LAND_U0 + 0.5, 2.0, ROOF_Z - 0.05))), []),
+    (0.05, (tuple(B(LAND_U0 + 0.7, 4.3, LAND_Z + EYE)), tuple(B(LAND_U0 + 0.75, 0.0, ROOF_Z + 0.9))), []),
+    (0.05, (tuple(B(LAND_U0 + 0.75, STAIR_V0 - 5.5 * RUN, LAND_Z + 6 * RISE + EYE)),
+            tuple(B(LAND_U0 + 0.75, HALL_V0 + 1.0, ROOF_Z + 1.5))), []),
+    (0.05, (tuple(B(LAND_U0 + 0.65, FLIGHT2_V1 - 0.7, ROOF_Z + EYE)), tuple(B(LAND_U0 - 2.5, HALL_V0 + 1.6, ROOF_Z + 1.4))), []),
+    # the hall from its east end, then down its length past every work
+    (0.05, (tuple(B(HALL_U1 - 1.75, -2.6, ROOF_Z + EYE)), tuple(B(HALL_U0, 0.3, ROOF_Z + 1.65))), []),
+    # (the long wall's works from the middle of the hall, between the freestanding walls)
+    (0.06, (tuple(B(16.0, -0.6, ROOF_Z + EYE)), tuple(B(16.0, HALL_V1, ROOF_Z + 1.95))), ["hall_n3"]),
+    (0.06, art_view("part_2", d=3.6), ["part_2"]),
+    (0.06, (tuple(B(9.5, -0.6, ROOF_Z + EYE)), tuple(B(9.5, HALL_V1, ROOF_Z + 1.95))), ["hall_n2"]),
+    (0.06, art_view("part_1", d=3.6), ["part_1"]),
+    (0.06, (tuple(B(1.5, -0.6, ROOF_Z + EYE)), tuple(B(1.5, HALL_V1, ROOF_Z + 1.95))), ["hall_n1"]),
+    # last: the monumental canvas on the end wall
+    (0.07, (tuple(B(5.4, -0.6, ROOF_Z + EYE)), tuple(B(HALL_U0, 0.3, ROOF_Z + 2.15))), ["hall_w"]),
+]
+times = []
+for step, *_ in STEPS:
+    times.append(round((times[-1] if times else 0.0) + step, 4))
+WALK = times[-1]
 
 
 def P(t):
     return round(t / WALK, 4)
 
 
-MARGIN = 1.85                # the work fills about half the view, with wall around it
-
-
-def art_view(wid, slide=0.0, d=None):
-    """Camera square on to a work: on its centre line, eye height, far enough
-    back that the work fills about half the view; slide moves along the wall."""
-    _, wall, s_, zc, w, h, *_ = WORK_BY_ID[wid]
-    F = wall_frame(wall, s_)
-    d = d or max(h * MARGIN / 2 / math.tan(HALF_V), w * MARGIN / 2 / math.tan(HALF_H))
-    pos = F @ Vector((slide, -d, 0))
-    return (pos.x, pos.y, EYE), tuple(F @ Vector((0, 0, zc)))
-
-
-def key(t, pos, target):
-    return {"p": P(t), "pos": tuple(pos), "target": tuple(target)}
-
-
-labels = []
-
-
-def hold(t0, t1, a, b, works=()):
-    """Two keys a short way apart in space but a long way apart in scroll; the
-    works in view share one caption on the website for the length of the hold."""
-    if works:
-        labels.append({"works": list(works), "range": [P(t0), P(t1)]})
-    return [key(t0, *a), key(t1, *b)]
-
-
-def single(t0, t1, wid, drift=0.1, d=None):
-    return hold(t0, t1, art_view(wid, -drift, d), art_view(wid, drift, d), works=[wid])
-
-
-VAULT_VIEW = tuple(B(VAULT_U, CH_V1, 1.65))
-keys = [
-    key(0.00, (-1.0, -0.4, EYE), (-0.7, 6.0, 1.38)),
-    key(0.08, (-0.5, -0.3, EYE), (-0.1, 6.0, 1.38)),
-    key(0.20, (4.0, 0.1, EYE), (5.4, 6.0, 1.42)),
-    *single(0.30, 0.38, "curtain", 0.15),
-    *single(0.45, 0.51, "pier"),
-    # round the pier's corner into the corridor (whose far wall limits how far
-    # back the camera can stand for this work and the black wall's later)
-    key(0.56, (14.6, 5.3, EYE), art_view("corridor")[1]),
-    *single(0.60, 0.65, "corridor", 0.06, d=2.8),
-    # through the doorway: the back wall's canvas, then each wall in turn
-    key(0.70, (ROOM_CX, 9.6, EYE), (ROOM_CX, RY1, 1.75)),
-    *hold(0.75, 0.81, art_view("centre", d=5.1), art_view("centre", d=4.8), works=["centre"]),
-    *hold(0.86, 0.92, ((17.2, 12.35, EYE), (RX0, 12.5, 1.7)), ((17.3, 12.65, EYE), (RX0, 12.5, 1.7)),
-          works=["west_0", "west_1"]),
-    # (glance back at the centre so the view never swings through the camera)
-    key(0.955, (15.6, 12.4, EYE), (15.6, RY1, 1.7)),
-    *single(0.99, 1.05, "east"),
-    *hold(1.10, 1.16, ((15.1, 15.55, EYE), (15.12, RY0, 1.7)), ((15.15, 15.3, EYE), (15.12, RY0, 1.7)),
-          works=["door_l", "door_r"]),
-    # out through the doorway to the black volume's end wall
-    key(1.22, (ROOM_CX, 9.6, EYE), (14.8, 7.0, 1.5)),
-    *single(1.27, 1.32, "vol_w", 0.06, d=2.3),
-    # wide round the pier and the volume's corner into frame B
-    key(1.37, (14.9, 6.0, EYE), (13.4, 2.5, 1.5)),
-    key(1.41, (13.5, 4.3, EYE), (13.6, -1.0, 1.5)),
-    *single(1.47, 1.52, "vol_l"),
-    # out past the open door's edge, then square on to the vault: the three
-    # gilded works fill the round opening
-    key(1.545, tuple(B(2.3, -4.6, EYE)), tuple(B(4.2, 3.6, 1.6))),
-    *hold(1.59, 1.67, (tuple(B(4.6, -4.6, EYE)), VAULT_VIEW), (tuple(B(4.85, -4.35, EYE)), VAULT_VIEW),
-          works=["vault_l", "vault_c", "vault_r"]),
-    *single(1.72, 1.77, "vol_r", 0.08),
-    # into the beige room: turn to the volume's beige end, then the sideboard
-    key(1.82, tuple(B(10.2, -2.2, EYE)), tuple(B(10.0, 2.5, 1.6))),
-    *single(1.87, 1.92, "beige_x"),
-    *hold(1.97, 2.02, (tuple(B(10.6, 0.6, EYE)), tuple(B(10.95, ART_V, 1.55))),
-          (tuple(B(10.8, 0.65, EYE)), tuple(B(10.95, ART_V, 1.55)))),
-    # last: the blue colour field
-    *single(2.06, 2.10, "beige_field", 0.06),
-]
+keys = [{"p": P(t), "pos": tuple(view[0]), "target": tuple(view[1])} for t, (_, view, _w) in zip(times, STEPS)]
 assert all(a["p"] < b["p"] for a, b in zip(keys, keys[1:]))
-# the last label stays up to the end of the walk
-labels[-1]["range"][1] = 1.01
+# each work's eye icon shows from the key before the one that frames it to the
+# key after, so it is there as the work comes into view and as it leaves
+WORK_TIME = {wid: i for i, (_, _, works) in enumerate(STEPS) for wid in works}
+assert set(WORK_TIME) == set(WORK_BY_ID)
+TIME_OF = dict(zip(("library", "curtain", "room", "vault", "beige", "roof"),
+                   (0.0, times[WORK_TIME["curtain"]], times[WORK_TIME["centre"]], times[WORK_TIME["vault_c"]],
+                    times[WORK_TIME["beige_field"]] - 0.07, times[WORK_TIME["hall_n3"] - 1])))
 hotspots = [
-    {"id": "materials", "label": "Material library", "pos": (-2.12, 5.84, 1.08), "range": [P(0.0), P(0.2)]},
-    {"id": "curtains", "label": "Textile wall", "pos": (6.6, 5.8, 1.6), "range": [P(0.18), P(0.27)]},
-    {"id": "room", "label": "Gallery room", "pos": (ROOM_CX, RY1 - 0.05, 2.0), "range": [P(0.7), P(0.74)]},
-    {"id": "vault", "label": "The vault", "pos": tuple(B(VAULT_U + 0.3, 0.6, VAULT_Z)), "range": [P(1.55), P(1.7)]},
-    {"id": "lamp", "label": "Lighting", "pos": tuple(B(LAMP[0], LAMP[1] - 0.1, LAMP[2] + 0.36)), "range": [P(1.94), P(2.03)]},
+    {"id": "materials", "label": "Material library", "pos": (-2.12, 5.84, 1.08), "range": [P(0.0), P(0.18)]},
+    {"id": "lamp", "label": "Lighting", "pos": tuple(B(LAMP[0], LAMP[1] - 0.1, LAMP[2] + 0.36)),
+     "range": [P(times[WORK_TIME["beige_field"] - 1] - 0.02), P(times[WORK_TIME["beige_field"] - 1] + 0.03)]},
 ]
+
+
+def eye_at(wid):
+    """The eye icon sits just inside the frame's top-right corner."""
+    _, wall, s_, zc, w, h, *_ = WORK_BY_ID[wid]
+    return tuple(wall_frame(wall, s_) @ Vector((w / 2 - 0.14, -0.1, zc + h / 2 - 0.14)))
 
 
 def credit(wid):
@@ -998,9 +1177,10 @@ def credit(wid):
 
 
 # the Rooms menu's stops, and where the rooms turn light (the nav tab appears)
-rooms = [("Material library", 0.0), ("Textile wall", 0.34), ("Gallery room", 0.78), ("The vault", 1.63),
-         ("Exhibition hall", 1.995)]
-BRIGHT_FROM = 1.8
+rooms = [("Material library", TIME_OF["library"]), ("Textile wall", TIME_OF["curtain"]),
+         ("Gallery room", TIME_OF["room"]), ("The vault", TIME_OF["vault"]), ("Exhibition hall", TIME_OF["beige"]),
+         ("Rooftop hall", TIME_OF["roof"])]
+BRIGHT_FROM = times[WORK_TIME["vol_r"] + 1] - 0.02
 # Only write the website's path when asked: while the rooms are being designed
 # the live site keeps the path that matches its baked model.
 WRITE_WEB = "--web" in sys.argv
@@ -1016,20 +1196,23 @@ path_data = {
     "rooms": [{"label": label, "p": P(t)} for label, t in rooms],
     "keys": [{"p": k["p"], "pos": to_three(k["pos"]), "target": to_three(k["target"])} for k in keys],
     "hotspots": [{**h, "pos": to_three(h["pos"])} for h in hotspots],
-    # captions: who made the work(s) in view, shown while the camera holds there
-    "labels": [{"id": "-".join(lb["works"]), "range": lb["range"], "works": [credit(wid) for wid in lb["works"]]}
-               for lb in labels],
+    # the works each stop frames (the site fits them to narrow screens)
+    "labels": [{"id": "-".join(works), "range": [P(t), P(t)]} for t, (_, _, works) in zip(times, STEPS) if works],
+    # every work's eye icon (hover for who made it) and when it shows
+    "works": [{"id": wid, "pos": to_three(eye_at(wid)),
+               "range": [P(times[max(0, WORK_TIME[wid] - 1)]), P(times[min(len(times) - 1, WORK_TIME[wid] + 1)])],
+               **credit(wid)} for wid in WORK_BY_ID],
     # the vault door's hinge and swing, and where its smoke comes out; it opens
-    # as the camera reaches the landscape beside it, so the smoke has cleared
-    # by the time the view lines up with the opening
+    # as the camera turns toward the landscape beside it, so the smoke has
+    # thinned by the time the view lines up with the opening
     "vault": {
         "hinge": to_three(tuple(B(*HINGE))),
         "openDeg": DOOR_OPEN,
         "mouth": to_three(tuple(B(VAULT_U, 0.05, VAULT_Z))),
         "out": to_three(tuple(FB.to_3x3() @ Vector((0, -1, 0)))),
         "radius": VAULT_R,
-        "openFrom": P(1.43),
-        "openTo": P(1.78),
+        "openFrom": P(times[WORK_TIME["vol_l"] - 1]),
+        "openTo": P(times[WORK_TIME["vol_r"]] + 0.02),
     },
 }
 with open(os.path.join(WEB_DATA if WRITE_WEB else OUT, "path.json"), "w") as f:

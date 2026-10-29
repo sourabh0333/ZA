@@ -39,10 +39,12 @@ GROUPS = {
     "floor_a": 2048, "walls_a": 2048, "library": 2048, "furniture_a": 2048,
     "floor_b": 2048, "walls_b": 2048, "vault": 1024, "furniture_b": 2048,
     "room": 2048, "art": 2048,
+    "roof": 2048, "art_roof": 2048, "sky": 128,
 }
 FRAME_OF = {"floor_a": "a", "walls_a": "a", "library": "a", "furniture_a": "a",
             "floor_b": "b", "walls_b": "b", "vault": "b", "furniture_b": "b",
-            "room": "a", "art": "a"}
+            "room": "a", "art": "a",
+            "roof": "c", "art_roof": "c", "sky": "c"}
 
 BAKE_DIR = os.path.join(OUT, "bake")
 LM_DIR = os.path.join(WEB_PUBLIC, "lightmaps")
@@ -271,6 +273,10 @@ if opts["env"] and not opts["only"]:
     fb_pos = Vector((14.0, 3.5, 0.0)) + Vector((math.cos(math.radians(-40)), math.sin(math.radians(-40)), 0)) * 6.0 \
         + Vector((-math.sin(math.radians(-40)), math.cos(math.radians(-40)), 0)) * -1.0
     panorama("b", (fb_pos.x, fb_pos.y, 1.6))
+    # the rooftop hall: B(8.75, -1.0) at eye height above its floor (3.95 m)
+    hall = Vector((14.0, 3.5, 0.0)) + Vector((math.cos(math.radians(-40)), math.sin(math.radians(-40)), 0)) * 8.75 \
+        + Vector((-math.sin(math.radians(-40)), math.cos(math.radians(-40)), 0)) * -1.0
+    panorama("c", (hall.x, hall.y, 3.95 + 1.6))
 
 for name in GROUPS:
     ob = bpy.data.objects.get(name)

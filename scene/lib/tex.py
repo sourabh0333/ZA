@@ -158,6 +158,59 @@ def artwork_albedo(w=2048, h=1004, seed=3):
     return lin_to_srgb(rgb)
 
 
+def city_night(w=2048, h=1024, seed=17):
+    """A city skyline at dusk for the rooftop's glass wall (an emissive map,
+    tiled along a very wide plane): a sky glowing amber at the horizon and deep
+    blue overhead, dark towers, lit windows, a few red aviation lights and
+    the scatter of the streets below the horizon. Row 0 is the bottom."""
+    rng = np.random.default_rng(seed)
+    hv = 0.33                                    # the horizon (camera eye level)
+    y = (np.arange(h, dtype=np.float32)[:, None] + 0.5) / h
+    x = (np.arange(w, dtype=np.float32)[None, :] + 0.5) / w
+    t = np.clip((y - hv) / (1 - hv), 0, 1)
+    glow = np.array((0.42, 0.17, 0.07), np.float32)
+    mid = np.array((0.09, 0.06, 0.13), np.float32)
+    top = np.array((0.006, 0.009, 0.025), np.float32)
+    a = np.clip(t / 0.18, 0, 1)[..., None]
+    b = np.clip((t - 0.18) / 0.55, 0, 1)[..., None]
+    sky = glow * (1 - a) + mid * a
+    sky = sky * (1 - b) + top * b
+    haze = 0.08 * noise(rng, h, w, 40)[..., None] * (1 - t[..., None]) * glow
+    img = np.broadcast_to(sky, (h, w, 3)).copy() + haze
+    ground = y < hv
+    img[ground[:, 0]] = np.array((0.012, 0.011, 0.014), np.float32)
+    # street lights: a dense, warm scatter thinning toward the horizon
+    lights = rng.random((h, w)) < 0.006 * (1 - np.clip((hv - y) / hv, 0, 1) * 0.3)
+    lights &= ground
+    lamp = _blur(lights.astype(np.float32), 0.8) * 9.0
+    img += np.clip(lamp, 0, 1)[..., None] * np.array((1.0, 0.72, 0.42), np.float32)
+    # towers, back to front: further ones lower and hazier
+    # (the plane is far off, so even tall towers stand low on the horizon)
+    for layer, (n, hmax, shade) in enumerate(((150, 0.035, 0.07), (95, 0.06, 0.04), (45, 0.095, 0.018))):
+        for _ in range(n):
+            cx = rng.random()
+            bw = rng.uniform(0.003, 0.011) * (1 + layer * 0.5)
+            bh = rng.uniform(0.008, hmax) * (rng.random() ** 0.7)
+            x0, x1 = int((cx - bw / 2) * w), int((cx + bw / 2) * w)
+            y0, y1 = int((hv - 0.01) * h), int((hv + bh) * h)
+            cols = np.arange(x0, x1) % w
+            body = np.array((shade, shade * 1.05, shade * 1.4), np.float32)
+            img[y0:y1, cols] = body
+            # windows: a grid of small cells, some lit warm, a few cool
+            lit = rng.random()
+            for wy in range(y0 + 2, y1 - 1, 3):
+                for wx in range(x0 + 1, x1 - 1, 2):
+                    if rng.random() < 0.3 * lit + 0.05:
+                        c = (1.0, 0.78, 0.48) if rng.random() < 0.8 else (0.65, 0.8, 1.0)
+                        img[wy, wx % w] = np.array(c, np.float32) * rng.uniform(0.3, 0.85) * (0.55 + 0.45 * layer / 2)
+            if bh > 0.06 and rng.random() < 0.6:
+                img[y1:y1 + 2, int(cx * w) % w] = (1.0, 0.1, 0.05)   # aviation light
+    # haze: the city melts into the glow at the horizon
+    mist = np.exp(-((y - hv - 0.012) / 0.02) ** 2)[..., None] * 0.55
+    img = img * (1 - mist) + glow * 0.8 * mist
+    return lin_to_srgb(np.clip(img, 0, 1))
+
+
 def speckled_stone(size=512, seed=9):
     """Black granite/terrazzo with dense white and grey chips (the library
     panel's large swatch)."""

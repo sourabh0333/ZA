@@ -15,6 +15,9 @@ breathe:
                    valuable pieces of the collection
   beige_x          the beige end of the black volume, entering the last room
   beige            a blue colour field after the sideboard
+  hall_*, part_*   the rooftop hall (floor 3.95 m up, so centres are ~5.9 m):
+                   three tall works on the long wall, a wide canvas on each
+                   freestanding wall, a monumental gilded canvas on the end wall
 
 Fields: id, wall, s (metres along the wall, from its left end as you face it),
 z (centre height), w, h (outer size, frame included), style, palette, seed,
@@ -43,6 +46,12 @@ WORKS = [
     ("beige_x", "beige_x", 1.90, 1.70, 1.60, 2.05, "arches", "sea", 81, "float_black"),
     # (right of centre: the closing info card sits on the bare wall to its left)
     ("beige_field", "beige", 14.40, 1.60, 1.30, 1.75, "color_field", "dusk", 61, "float_black"),
+    ("hall_n3", "hall_n", 17.25, 5.90, 2.20, 2.90, "cutouts", "rose", 95, "float_oak"),
+    ("part_2", "part_2", 2.00, 5.60, 3.20, 2.00, "split", "dusk", 97, "float_black"),
+    ("hall_n2", "hall_n", 10.75, 5.90, 2.20, 2.90, "color_field", "noir", 93, "float_black"),
+    ("part_1", "part_1", 2.00, 5.60, 3.20, 2.00, "horizon", "sea", 96, "float_black"),
+    ("hall_n1", "hall_n", 2.75, 5.90, 2.40, 3.00, "gestural", "dusk", 92, "float_oak"),
+    ("hall_w", "hall_w", 5.30, 6.10, 4.40, 3.00, "gilded_field", "noir", 98, "gold"),
 ]
 
 # Wall-label details shown on the website when the camera stops at a work.
@@ -66,6 +75,12 @@ CREDITS = {
     "vault_r": ("Isabel Duarte", "Gilded Field", 2018, "Oil and gold leaf on canvas"),
     "beige_x": ("Oscar Lind", "Arc of Days", 2023, "Acrylic on canvas"),
     "beige_field": ("Maya Rao", "Blue Hour", 2024, "Oil on canvas"),
+    "hall_n3": ("Léa Fournier", "Rose Garden at Noon", 2023, "Acrylic on canvas"),
+    "part_2": ("Selin Arslan", "Dusk Divide", 2023, "Acrylic on canvas"),
+    "hall_n2": ("Viktor Hale", "Bronze Hour", 2022, "Oil and wax on canvas"),
+    "part_1": ("Kai Nakamura", "Harbour, First Light", 2024, "Acrylic on canvas"),
+    "hall_n1": ("Amara Okoye", "Tidal Memory", 2024, "Oil on linen"),
+    "hall_w": ("Alessandro Conti", "Gilded Night", 2020, "Oil and gold leaf on canvas"),
 }
 
 assert len({w[0] for w in WORKS}) == len(WORKS) and set(CREDITS) == {w[0] for w in WORKS}

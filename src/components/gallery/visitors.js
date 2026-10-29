@@ -21,15 +21,16 @@ export const PEOPLE = [
   { id: "blazer", pos: [17.4, 0, -14.4], look: [15.5, -16], env: "a", at: 9 },
   // the exhibition hall: one on the stairs facing the blue colour field, one at the sideboard
   {
-    // third step (0.57 m), beside the painting; the planted foot rests on the first
+    // third step (0.59 m), against the wall, clear of the way up to the roof;
+    // the planted foot rests on the first
     id: "stairs",
-    pos: [29.15, 0.15, 3.1],
+    pos: [29.45, 0.155, 2.75],
     look: [28.6, 1.45],
     env: "b",
     at: 6,
     shadows: [
-      [29.15, 0.57, 3.12, 0.55, 0.45, 0.5],
-      [29.0, 0.19, 2.42, 0.35, 0.3, 0.45],
+      [29.45, 0.5925, 2.77, 0.55, 0.45, 0.5],
+      [29.3, 0.1975, 2.07, 0.35, 0.3, 0.45],
     ],
   },
   { id: "hall", pos: [25.6, 0.031, 0.35], look: [25.0, -1.0], env: "b", at: 3 },

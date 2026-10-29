@@ -35,6 +35,17 @@ the black volume, where the three gilded works hang. To change a work, edit its
 row in `collection.py` and rebuild; to preview the whole set as a contact sheet
 without building the scene, call `art.make(...)` for each row of `WORKS`.
 
+The walk ends on the roof. The beige room's stairs turn at a landing in the far
+corner and climb the right wall through an opening in the ceiling (twenty
+19.75 cm risers, `ROOF_Z` = 3.95 m) into the rooftop hall, built on top of
+frame B: white walls, a 6 m ceiling with beams and a luminous panel, two
+freestanding walls, sculptures on plinths, and a glass wall onto a terrace and a
+city skyline at dusk (`tex.city_night`, an emissive map tiled along a very wide
+plane far off). Its works hang like the others (walls `hall_n`, `hall_w`,
+`part_1`, `part_2`; `WALL_FLOOR` lifts them and the camera to the roof) and bake
+into their own groups: `roof` (the hall), `art_roof` (its works) and `sky` (the
+luminous panel and the skyline, which are emissive and need no light).
+
 The vault door (`vault_door` collection, tagged `door`) is not baked: the
 website hangs it on a pivot at its hinge and swings it closed/open by scroll
 progress, with smoke from the opening (`src/components/gallery/vault.js`).
@@ -44,25 +55,26 @@ Outputs used by the site:
 
 - `public/gallery/model/gallery.glb` geometry + material textures
 - `public/gallery/lightmaps/*.webp` baked light per group (8-bit, scaled)
-- `public/gallery/env_a.hdr`, `env_b.hdr` reflection panoramas
+- `public/gallery/env_a.hdr`, `env_b.hdr`, `env_c.hdr` reflection panoramas (dark gallery, frame B, rooftop hall)
 - `public/gallery/poster.webp` first frame, shown until WebGL is ready
-- `src/components/gallery/data/path.json` camera path, hotspots, wall labels (placeholder credits from `lib/collection.py` `CREDITS`)
+- `src/components/gallery/data/path.json` camera path, each work's eye icon and details (placeholder credits from `lib/collection.py` `CREDITS`)
 - `src/components/gallery/data/lightmaps.json` lightmap files and intensities
 
 The camera path is defined once in `build_scene.py` (`keys`) and interpolated
 identically in Blender (`lib/camera_path.py`) and the browser (`path.js`).
-It stops at every artwork: `art_view` places the camera square on to a work,
-far enough back to fit it with a margin, and `hold` keeps it there for a stretch
-of scroll while it drifts slightly. The walk's length (`WALK`), the Rooms menu
-stops and the point where the rooms turn light are written to `path.json` too,
-so the site's scroll height and menu follow any change to the path.
+It passes square on to every artwork without stopping: `art_view` places the
+camera far enough back to fit a work with a margin, and `STEPS` lists the keys
+with the time between them. The walk's length (`WALK`), the Rooms menu stops,
+the point where the rooms turn light and each work's eye icon (where it sits,
+when it shows, its credits) are written to `path.json` too, so the site
+follows any change to the path. Hovering an eye (tapping, on a touch screen)
+opens that work's details.
 
-The path is composed for a 4:3 screen. On portrait screens, phones on their
-side and tablets, the site refits it (`src/components/gallery/framing.js`):
-it widens the lens, steps the camera back (never through a wall) until each
-work fits the part of the screen the caption leaves clear, and pans along a
-group of works the room is too small to take in at once. Desktop views are
-used exactly as designed.
+The path is composed for a 4:3 screen. On portrait screens and phones on
+their side the site refits it (`src/components/gallery/framing.js`): it widens
+the lens and steps the camera back (never through a wall) until each work fits
+the part of the screen the header and Rooms bar leave clear. Desktop and tablet
+views are used exactly as designed.
 
 ## Visitors
 

@@ -69,7 +69,8 @@ export const FOV = pathData.fov;
 export const WALK = pathData.walk; // the walk's length; the hero's scroll height scales with it
 export const BRIGHT_FROM = pathData.brightFrom; // where the rooms turn light (the nav tab appears)
 export const ROOMS = pathData.rooms; // the Rooms menu's stops
-export const LABELS = pathData.labels; // wall labels: who made each work, shown while the camera holds on it
+export const LABELS = pathData.labels; // the works each stop frames, for fitting the path to the screen
+export const WORKS = pathData.works; // each work's eye icon: where it sits, when it shows, who made the work
 export const VAULT = pathData.vault;
 
 /** Camera position and target at a scroll progress; returns the lens shift [x, y] in px. */
@@ -81,7 +82,7 @@ export function samplePath(progress, outPos, outTarget, outShift) {
     outShift[0] = outShift[1] = 0;
     return outShift;
   }
-  // eased between keys, so the shift settles while the camera holds on a work
+  // eased between keys, so the shift settles as the camera passes a work
   const f = t * (shifts.length - 1);
   const i = Math.min(shifts.length - 2, Math.floor(f));
   const u = f - i;

@@ -18,14 +18,14 @@ import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import lightmaps from "./data/lightmaps.json";
 import { frame, measureGallery } from "./framing";
-import { BRIGHT_FROM, FOV, LABELS, samplePath, setFraming, VAULT } from "./path";
+import { BRIGHT_FROM, FOV, samplePath, setFraming, VAULT, WORKS } from "./path";
 import People from "./People";
 import { useGallery } from "./store";
 import { VaultFx } from "./vault";
 import styles from "./gallery.module.css";
 
 const MODEL_URL = "/gallery/model/gallery.glb";
-const ENV_URLS = ["/gallery/env_a.hdr", "/gallery/env_b.hdr"];
+const ENV_URLS = ["/gallery/env_a.hdr", "/gallery/env_b.hdr", "/gallery/env_c.hdr"]; // dark gallery, frame B, rooftop
 const LM_NAMES = Object.keys(lightmaps);
 const LM_URLS = LM_NAMES.map((n) => lightmaps[n].file);
 const EXPOSURE = 1.0;
@@ -44,10 +44,11 @@ function specularOnlyEnv(material) {
 }
 
 /** Binds each mesh to its group's lightmap and reflection map; returns how many were baked. */
-function prepareGallery(scene, lmTextures, [envA, envB], gl) {
+function prepareGallery(scene, lmTextures, envs, gl) {
   const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy());
-  envA.mapping = EquirectangularReflectionMapping;
-  envB.mapping = EquirectangularReflectionMapping;
+  for (const env of envs) env.mapping = EquirectangularReflectionMapping;
+  const [envA, envB] = envs;
+  const envByName = { a: envs[0], b: envs[1], c: envs[2] };
   const lmByName = {};
   LM_NAMES.forEach((n, i) => {
     const t = lmTextures[i];
@@ -78,7 +79,7 @@ function prepareGallery(scene, lmTextures, [envA, envB], gl) {
       baked += 1;
       mat.lightMap = lmByName[name];
       mat.lightMapIntensity = info.intensity * Math.PI * EXPOSURE;
-      mat.envMap = info.env === "b" ? envB : envA;
+      mat.envMap = envByName[info.env] ?? envA;
       mat.envMapIntensity = (web.env ?? 0.4) * EXPOSURE;
       specularOnlyEnv(mat);
     }
@@ -95,8 +96,19 @@ function prepareGallery(scene, lmTextures, [envA, envB], gl) {
 const tmpPos = new Vector3();
 const tmpTarget = new Vector3();
 const tmpShift = [0, 0];
+const tmpProj = new Vector3();
+const EDGE = 16; // px the details card keeps from the screen's edges
 
-/** Lens shift: keeps the work centred in the part of the screen the caption leaves clear. */
+/** Puts an element's centre on a point in the scene; false when the point is behind the camera. */
+function placeAt(el, pos, camera, size) {
+  tmpProj.set(pos[0], pos[1], pos[2]).project(camera);
+  const x = ((tmpProj.x + 1) / 2) * size.width;
+  const y = ((1 - tmpProj.y) / 2) * size.height;
+  el.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+  return tmpProj.z < 1;
+}
+
+/** Lens shift: keeps the work centred in the part of the screen the header and bar leave clear. */
 function shiftLens(camera, size, sx, sy) {
   const v = camera.view;
   if (!sx && !sy) {
@@ -117,18 +129,32 @@ function syncFrame(store, camera, size, dt, flags) {
   camera.updateMatrixWorld();
   shiftLens(camera, size, sx, sy);
 
-  for (const l of LABELS) {
-    const el = store.labelEls.get(l.id);
+  // each work's eye, on the work's top-right corner while the work is in view
+  for (const w of WORKS) {
+    const el = store.workEls.get(w.id);
     if (!el) continue;
-    // (the last caption's range runs past the end of the walk; its line fills at the end)
-    const t = (p - l.range[0]) / (Math.min(1, l.range[1]) - l.range[0]);
-    const show = p >= l.range[0] && p <= l.range[1];
-    if (show !== flags.labels[l.id]) {
-      flags.labels[l.id] = show;
+    const inFront = placeAt(el, w.pos, camera, size);
+    const onScreen = Math.abs(tmpProj.x) < 0.94 && Math.abs(tmpProj.y) < 0.9;
+    const show = p >= w.range[0] && p <= w.range[1] && inFront && onScreen;
+    if (show !== flags.works[w.id]) {
+      flags.works[w.id] = show;
       el.setAttribute("data-visible", String(show));
     }
-    // the thin line along the caption's foot fills as the camera holds on the work
-    if (show) el.style.setProperty("--hold", Math.min(1, t).toFixed(3));
+    // open the details outward, onto the wall; on the other side if that runs off
+    // the screen; below the eye, kept on screen, if neither side has room (phones)
+    if (show) {
+      const x = ((tmpProj.x + 1) / 2) * size.width;
+      const cardW = el.lastChild.offsetWidth + 12;
+      const side = x + cardW + EDGE <= size.width ? "right" : x - cardW >= EDGE ? "left" : "below";
+      if (side !== flags.sides[w.id]) {
+        flags.sides[w.id] = side;
+        el.setAttribute("data-side", side);
+      }
+      if (side === "below") {
+        const left = Math.min(Math.max(x - cardW / 2, EDGE), size.width - cardW - EDGE);
+        el.style.setProperty("--card-x", `${(left - x + el.offsetWidth / 2).toFixed(1)}px`);
+      }
+    }
   }
   const bright = p > BRIGHT_FROM;
   if (bright !== flags.bright && store.headerEl) {
@@ -186,15 +212,10 @@ function useFraming(scene, store) {
     const apply = () => {
       if (cancelled) return;
       const frameX = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--frame-x")) || 16;
-      const captions = new Map();
-      for (const [id, el] of store.labelEls) {
-        captions.set(id, { top: el.offsetTop, right: el.offsetLeft + el.offsetWidth });
-      }
       const layout = {
         header: store.headerEl?.offsetHeight ?? 64,
         side: frameX + 8,
         bottomBar: 56,
-        captions,
       };
       const { fov, keys, shifts } = frame(gallery, size.width, size.height, layout);
       setFraming(keys, shifts);
@@ -205,7 +226,7 @@ function useFraming(scene, store) {
       }
     };
     apply();
-    // caption heights change once the web font arrives
+    // the header's height settles once the web font arrives
     document.fonts?.ready.then(apply);
     return () => {
       cancelled = true;
@@ -240,7 +261,7 @@ function Ready({ onReady }) {
 
 function CameraRig() {
   const store = useGallery();
-  const flags = useRef({ bright: false, labels: {} });
+  const flags = useRef({ bright: false, works: {}, sides: {} });
   useFrame((state, dt) => syncFrame(store, state.camera, state.size, dt, flags.current));
   return null;
 }

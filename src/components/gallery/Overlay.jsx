@@ -3,13 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { LABELS, ROOMS } from "./path";
+import { ROOMS, WORKS } from "./path";
 import { useGallery } from "./store";
-import { CartIcon, ExpandIcon, PlanIcon, SearchIcon, UserIcon } from "./icons";
+import { CartIcon, ExpandIcon, EyeIcon, PlanIcon, SearchIcon, UserIcon } from "./icons";
 import styles from "./gallery.module.css";
 
-// each work's place in the walk, for the caption's "No. 04 / 17"
-const WORK_NUMBER = new Map(LABELS.flatMap((l) => l.works).map((w, i) => [w.title, i + 1]));
 
 const noSubscribe = () => () => {};
 // iPhone Safari (and some in-app browsers) cannot take a page fullscreen
@@ -77,6 +75,7 @@ export function SiteHeader() {
 export function StageOverlay() {
   const store = useGallery();
   const [roomsOpen, setRoomsOpen] = useState(false);
+  const [openWork, setOpenWork] = useState(null); // details pinned open by a tap (touch screens)
   const roomsRef = useRef(null);
   const fullscreen = useSyncExternalStore(noSubscribe, canFullscreen, () => false);
 
@@ -92,6 +91,19 @@ export function StageOverlay() {
       window.removeEventListener("keydown", close);
     };
   }, [roomsOpen]);
+
+  useEffect(() => {
+    if (!openWork) return undefined;
+    const close = (e) => {
+      if (e.type === "keydown" ? e.key === "Escape" : !e.target.closest?.(`.${styles.artSpot}`)) setOpenWork(null);
+    };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("keydown", close);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("keydown", close);
+    };
+  }, [openWork]);
 
   const go = (p) => {
     setRoomsOpen(false);
@@ -110,35 +122,34 @@ export function StageOverlay() {
         <span className={styles.frameRight} />
       </div>
 
-      {LABELS.map((l) => (
-        <aside
-          key={l.id}
-          className={styles.caption}
-          data-count={l.works.length}
-          ref={(el) => store.setLabel(l.id, el)}
-          aria-hidden="true"
-        >
-          {l.works.map((w) => (
-            <div key={w.title} className={styles.captionWork}>
-              <p className={styles.captionIndex}>
-                No. {String(WORK_NUMBER.get(w.title)).padStart(2, "0")}
-                <span>/ {String(WORK_NUMBER.size).padStart(2, "0")}</span>
-              </p>
-              <p className={styles.captionTitle}>{w.title}</p>
-              <p className={styles.captionArtist}>{w.artist}</p>
-              <p className={styles.captionMeta}>
-                {w.medium}
-                <span aria-hidden="true">·</span>
-                {w.year}
-                <span aria-hidden="true">·</span>
-                {w.size}
-              </p>
-            </div>
-          ))}
-          <span className={styles.captionProgress} aria-hidden="true">
-            <span />
-          </span>
-        </aside>
+      {WORKS.map((w, i) => (
+        <div key={w.id} className={styles.artSpot} data-open={openWork === w.id} ref={(el) => store.setWork(w.id, el)}>
+          <button
+            type="button"
+            className={styles.artEye}
+            aria-label={`About ${w.title} by ${w.artist}`}
+            aria-expanded={openWork === w.id}
+            onClick={() => setOpenWork((id) => (id === w.id ? null : w.id))}
+          >
+            <EyeIcon />
+          </button>
+          <div className={styles.artCard} role="tooltip">
+            <p className={styles.artCardNo}>
+              No. {String(i + 1).padStart(2, "0")}
+              <span>/ {String(WORKS.length).padStart(2, "0")}</span>
+            </p>
+            <p className={styles.artCardTitle}>{w.title}</p>
+            <p className={styles.artCardArtist}>{w.artist}</p>
+            <dl className={styles.artCardFacts}>
+              <dt>Year</dt>
+              <dd>{w.year}</dd>
+              <dt>Medium</dt>
+              <dd>{w.medium}</dd>
+              <dt>Size</dt>
+              <dd>{w.size}</dd>
+            </dl>
+          </div>
+        </div>
       ))}
 
       <div className={styles.bottomLeft} ref={roomsRef}>

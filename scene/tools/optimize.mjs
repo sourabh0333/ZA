@@ -28,7 +28,9 @@ await doc.transform(
   prune({ keepExtras: true, keepAttributes: true }),
   weld(),
   textureCompress({ encoder: sharp, targetFormat: "webp", quality: 82, resize: [1024, 1024], slots: /^baseColor/ }),
-  textureCompress({ encoder: sharp, targetFormat: "webp", quality: 80, resize: [512, 512], slots: /^(normal|metallicRoughness|emissive|occlusion)/ }),
+  textureCompress({ encoder: sharp, targetFormat: "webp", quality: 80, resize: [512, 512], slots: /^(normal|metallicRoughness|occlusion)/ }),
+  // the rooftop's city skyline is the only emissive map, seen big through the glass
+  textureCompress({ encoder: sharp, targetFormat: "webp", quality: 85, resize: [2048, 2048], slots: /^emissive/ }),
   // lightmap UVs need more precision than the default 12 bits or seams appear
   meshopt({ encoder: MeshoptEncoder, level: "medium", quantizePosition: 14, quantizeTexcoord: 16, quantizeNormal: 10 }),
 );

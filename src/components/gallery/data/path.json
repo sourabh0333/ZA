@@ -1,7 +1,7 @@
 {
  "fov": 50,
- "walk": 2.1,
- "brightFrom": 0.8571,
+ "walk": 2.08,
+ "brightFrom": 0.5817,
  "rooms": [
   {
    "label": "Material library",
@@ -9,19 +9,23 @@
   },
   {
    "label": "Textile wall",
-   "p": 0.1619
+   "p": 0.1442
   },
   {
    "label": "Gallery room",
-   "p": 0.3714
+   "p": 0.274
   },
   {
    "label": "The vault",
-   "p": 0.7762
+   "p": 0.5385
   },
   {
    "label": "Exhibition hall",
-   "p": 0.95
+   "p": 0.6442
+  },
+  {
+   "label": "Rooftop hall",
+   "p": 0.8221
   }
  ],
  "keys": [
@@ -39,7 +43,7 @@
    ]
   },
   {
-   "p": 0.0381,
+   "p": 0.0385,
    "pos": [
     -0.5,
     1.55,
@@ -52,7 +56,7 @@
    ]
   },
   {
-   "p": 0.0952,
+   "p": 0.0962,
    "pos": [
     4.0,
     1.55,
@@ -65,9 +69,9 @@
    ]
   },
   {
-   "p": 0.1429,
+   "p": 0.1442,
    "pos": [
-    8.7,
+    8.85,
     1.55,
     -1.1216
    ],
@@ -78,22 +82,9 @@
    ]
   },
   {
-   "p": 0.181,
+   "p": 0.1827,
    "pos": [
-    9.0,
-    1.55,
-    -1.1216
-   ],
-   "target": [
-    8.85,
-    1.9,
-    -5.74
-   ]
-  },
-  {
-   "p": 0.2143,
-   "pos": [
-    13.0,
+    13.1,
     1.55,
     -2.4711
    ],
@@ -104,20 +95,7 @@
    ]
   },
   {
-   "p": 0.2429,
-   "pos": [
-    13.2,
-    1.55,
-    -2.4711
-   ],
-   "target": [
-    13.1,
-    1.65,
-    -5.645
-   ]
-  },
-  {
-   "p": 0.2667,
+   "p": 0.2067,
    "pos": [
     14.6,
     1.55,
@@ -130,11 +108,11 @@
    ]
   },
   {
-   "p": 0.2857,
+   "p": 0.226,
    "pos": [
-    14.2604,
+    14.2866,
     1.55,
-    -6.9953
+    -6.9413
    ],
    "target": [
     16.8059,
@@ -143,20 +121,7 @@
    ]
   },
   {
-   "p": 0.3095,
-   "pos": [
-    14.3127,
-    1.55,
-    -6.8873
-   ],
-   "target": [
-    16.8059,
-    1.65,
-    -8.1632
-   ]
-  },
-  {
-   "p": 0.3333,
+   "p": 0.25,
    "pos": [
     15.2,
     1.55,
@@ -169,11 +134,11 @@
    ]
   },
   {
-   "p": 0.3571,
+   "p": 0.274,
    "pos": [
     15.2,
     1.55,
-    -10.9
+    -11.05
    ],
    "target": [
     15.2,
@@ -182,24 +147,11 @@
    ]
   },
   {
-   "p": 0.3857,
+   "p": 0.3029,
    "pos": [
-    15.2,
+    17.25,
     1.55,
-    -11.2
-   ],
-   "target": [
-    15.2,
-    1.75,
-    -16.0
-   ]
-  },
-  {
-   "p": 0.4095,
-   "pos": [
-    17.2,
-    1.55,
-    -12.35
+    -12.5
    ],
    "target": [
     11.7,
@@ -208,20 +160,7 @@
    ]
   },
   {
-   "p": 0.4381,
-   "pos": [
-    17.3,
-    1.55,
-    -12.65
-   ],
-   "target": [
-    11.7,
-    1.7,
-    -12.5
-   ]
-  },
-  {
-   "p": 0.4548,
+   "p": 0.3221,
    "pos": [
     15.6,
     1.55,
@@ -234,11 +173,11 @@
    ]
   },
   {
-   "p": 0.4714,
+   "p": 0.3413,
    "pos": [
     14.2356,
     1.55,
-    -12.8
+    -12.7
    ],
    "target": [
     18.7,
@@ -247,24 +186,11 @@
    ]
   },
   {
-   "p": 0.5,
+   "p": 0.3702,
    "pos": [
-    14.2356,
+    15.12,
     1.55,
-    -12.6
-   ],
-   "target": [
-    18.7,
-    1.7,
-    -12.7
-   ]
-  },
-  {
-   "p": 0.5238,
-   "pos": [
-    15.1,
-    1.55,
-    -15.55
+    -15.4
    ],
    "target": [
     15.12,
@@ -273,20 +199,7 @@
    ]
   },
   {
-   "p": 0.5524,
-   "pos": [
-    15.15,
-    1.55,
-    -15.3
-   ],
-   "target": [
-    15.12,
-    1.7,
-    -9.0
-   ]
-  },
-  {
-   "p": 0.581,
+   "p": 0.399,
    "pos": [
     15.2,
     1.55,
@@ -299,11 +212,11 @@
    ]
   },
   {
-   "p": 0.6048,
+   "p": 0.4231,
    "pos": [
-    14.205,
+    14.1665,
     1.55,
-    -7.3225
+    -7.2765
    ],
    "target": [
     15.9284,
@@ -312,20 +225,7 @@
    ]
   },
   {
-   "p": 0.6286,
-   "pos": [
-    14.1279,
-    1.55,
-    -7.2306
-   ],
-   "target": [
-    15.9284,
-    1.65,
-    -5.7981
-   ]
-  },
-  {
-   "p": 0.6524,
+   "p": 0.4471,
    "pos": [
     14.9,
     1.55,
@@ -338,7 +238,7 @@
    ]
   },
   {
-   "p": 0.6714,
+   "p": 0.4663,
    "pos": [
     13.5,
     1.55,
@@ -351,11 +251,11 @@
    ]
   },
   {
-   "p": 0.7,
+   "p": 0.4952,
    "pos": [
-    13.0008,
+    13.0774,
     1.55,
-    -0.5201
+    -0.4559
    ],
    "target": [
     14.9576,
@@ -364,20 +264,7 @@
    ]
   },
   {
-   "p": 0.7238,
-   "pos": [
-    13.154,
-    1.55,
-    -0.3916
-   ],
-   "target": [
-    14.9576,
-    1.6,
-    -2.6965
-   ]
-  },
-  {
-   "p": 0.7357,
+   "p": 0.5144,
    "pos": [
     12.8051,
     1.55,
@@ -390,11 +277,11 @@
    ]
   },
   {
-   "p": 0.7571,
+   "p": 0.5385,
    "pos": [
-    14.567,
+    14.7232,
     1.55,
-    2.9806
+    2.9812
    ],
    "target": [
     19.9527,
@@ -403,24 +290,11 @@
    ]
   },
   {
-   "p": 0.7952,
+   "p": 0.5673,
    "pos": [
-    14.9192,
+    18.0116,
     1.55,
-    2.9498
-   ],
-   "target": [
-    19.9527,
-    1.65,
-    -3.2045
-   ]
-  },
-  {
-   "p": 0.819,
-   "pos": [
-    17.9503,
-    1.55,
-    3.9579
+    4.0093
    ],
    "target": [
     20.0518,
@@ -429,20 +303,7 @@
    ]
   },
   {
-   "p": 0.8429,
-   "pos": [
-    18.0729,
-    1.55,
-    4.0608
-   ],
-   "target": [
-    20.0518,
-    1.6,
-    1.578
-   ]
-  },
-  {
-   "p": 0.8667,
+   "p": 0.5913,
    "pos": [
     20.3995,
     1.55,
@@ -455,11 +316,11 @@
    ]
   },
   {
-   "p": 0.8905,
+   "p": 0.6154,
    "pos": [
-    24.975,
+    25.0393,
     1.55,
-    3.3594
+    3.2828
    ],
    "target": [
     21.9242,
@@ -468,24 +329,11 @@
    ]
   },
   {
-   "p": 0.9143,
+   "p": 0.6442,
    "pos": [
-    25.1036,
+    22.5823,
     1.55,
-    3.2062
-   ],
-   "target": [
-    21.9242,
-    1.7,
-    0.6689
-   ]
-  },
-  {
-   "p": 0.9381,
-   "pos": [
-    22.5057,
-    1.55,
-    2.8539
+    2.9182
    ],
    "target": [
     25.9878,
@@ -494,42 +342,172 @@
    ]
   },
   {
-   "p": 0.9619,
+   "p": 0.6779,
    "pos": [
-    22.6911,
+    26.3993,
     1.55,
-    2.9442
-   ],
-   "target": [
-    25.9878,
-    1.55,
-    -0.7513
-   ]
-  },
-  {
-   "p": 0.981,
-   "pos": [
-    26.3533,
-    1.55,
-    4.087
+    4.1256
    ],
    "target": [
     28.6307,
     1.6,
     1.4663
+   ]
+  },
+  {
+   "p": 0.7019,
+   "pos": [
+    26.8925,
+    1.55,
+    4.3156
+   ],
+   "target": [
+    29.2505,
+    1.3,
+    3.6834
+   ]
+  },
+  {
+   "p": 0.726,
+   "pos": [
+    28.598,
+    1.945,
+    3.5276
+   ],
+   "target": [
+    28.8829,
+    3.9,
+    6.3774
+   ]
+  },
+  {
+   "p": 0.75,
+   "pos": [
+    30.5145,
+    3.13,
+    4.744
+   ],
+   "target": [
+    27.7888,
+    4.85,
+    8.0702
+   ]
+  },
+  {
+   "p": 0.774,
+   "pos": [
+    28.9137,
+    4.315,
+    6.7296
+   ],
+   "target": [
+    25.2176,
+    5.45,
+    11.1344
+   ]
+  },
+  {
+   "p": 0.7981,
+   "pos": [
+    27.1337,
+    5.5,
+    8.6953
+   ],
+   "target": [
+    23.1137,
+    5.35,
+    8.5857
+   ]
+  },
+  {
+   "p": 0.8221,
+   "pos": [
+    25.3515,
+    5.5,
+    9.4191
+   ],
+   "target": [
+    13.2353,
+    5.6,
+    -4.5333
+   ]
+  },
+  {
+   "p": 0.851,
+   "pos": [
+    25.871,
+    5.5,
+    7.2442
+   ],
+   "target": [
+    29.8563,
+    5.9,
+    2.4948
+   ]
+  },
+  {
+   "p": 0.8798,
+   "pos": [
+    21.9338,
+    5.5,
+    7.2693
+   ],
+   "target": [
+    24.2478,
+    5.6,
+    4.5115
+   ]
+  },
+  {
+   "p": 0.9087,
+   "pos": [
+    20.8917,
+    5.5,
+    3.0661
+   ],
+   "target": [
+    24.877,
+    5.9,
+    -1.6834
+   ]
+  },
+  {
+   "p": 0.9375,
+   "pos": [
+    16.5715,
+    5.5,
+    2.7698
+   ],
+   "target": [
+    18.8855,
+    5.6,
+    0.012
+   ]
+  },
+  {
+   "p": 0.9663,
+   "pos": [
+    14.7634,
+    5.5,
+    -2.0762
+   ],
+   "target": [
+    18.7487,
+    5.9,
+    -6.8257
    ]
   },
   {
    "p": 1.0,
    "pos": [
-    26.4452,
-    1.55,
-    4.1641
+    17.751,
+    5.5,
+    0.4307
    ],
    "target": [
-    28.6307,
-    1.6,
-    1.4663
+    13.2353,
+    6.1,
+    -4.5333
    ]
   }
  ],
@@ -544,46 +522,7 @@
    ],
    "range": [
     0.0,
-    0.0952
-   ]
-  },
-  {
-   "id": "curtains",
-   "label": "Textile wall",
-   "pos": [
-    6.6,
-    1.6,
-    -5.8
-   ],
-   "range": [
-    0.0857,
-    0.1286
-   ]
-  },
-  {
-   "id": "room",
-   "label": "Gallery room",
-   "pos": [
-    15.2,
-    2.0,
-    -15.95
-   ],
-   "range": [
-    0.3333,
-    0.3524
-   ]
-  },
-  {
-   "id": "vault",
-   "label": "The vault",
-   "pos": [
-    18.2542,
-    1.62,
-    -0.7135
-   ],
-   "range": [
-    0.7381,
-    0.8095
+    0.0865
    ]
   },
   {
@@ -595,8 +534,8 @@
     0.23
    ],
    "range": [
-    0.9238,
-    0.9667
+    0.6346,
+    0.6587
    ]
   }
  ],
@@ -604,238 +543,528 @@
   {
    "id": "curtain",
    "range": [
-    0.1429,
-    0.181
-   ],
-   "works": [
-    {
-     "artist": "Lena Okafor",
-     "title": "Evening Over the Ridge",
-     "year": 2024,
-     "medium": "Acrylic on canvas",
-     "size": "300 \u00d7 190 cm"
-    }
+    0.1442,
+    0.1442
    ]
   },
   {
    "id": "pier",
    "range": [
-    0.2143,
-    0.2429
-   ],
-   "works": [
-    {
-     "artist": "Mira Castell",
-     "title": "Ember Fields",
-     "year": 2023,
-     "medium": "Oil on canvas",
-     "size": "120 \u00d7 160 cm"
-    }
+    0.1827,
+    0.1827
    ]
   },
   {
    "id": "corridor",
    "range": [
-    0.2857,
-    0.3095
-   ],
-   "works": [
-    {
-     "artist": "Kenji Arai",
-     "title": "Ens\u014d No. 4",
-     "year": 2022,
-     "medium": "Sumi ink on paper",
-     "size": "120 \u00d7 160 cm"
-    }
+    0.226,
+    0.226
    ]
   },
   {
    "id": "centre",
    "range": [
-    0.3571,
-    0.3857
-   ],
-   "works": [
-    {
-     "artist": "Aarav Mehta",
-     "title": "Monsoon Gesture",
-     "year": 2021,
-     "medium": "Oil on linen",
-     "size": "320 \u00d7 200 cm"
-    }
+    0.274,
+    0.274
    ]
   },
   {
    "id": "west_0-west_1",
    "range": [
-    0.4095,
-    0.4381
-   ],
-   "works": [
-    {
-     "artist": "Sofia Brandt",
-     "title": "Construct VII",
-     "year": 2023,
-     "medium": "Acrylic on canvas",
-     "size": "160 \u00d7 205 cm"
-    },
-    {
-     "artist": "Noor Haddad",
-     "title": "Garden Shapes",
-     "year": 2024,
-     "medium": "Acrylic on canvas",
-     "size": "160 \u00d7 205 cm"
-    }
+    0.3029,
+    0.3029
    ]
   },
   {
    "id": "east",
    "range": [
-    0.4714,
-    0.5
-   ],
-   "works": [
-    {
-     "artist": "Daniel Reyes",
-     "title": "Horizon Split",
-     "year": 2022,
-     "medium": "Acrylic on canvas",
-     "size": "290 \u00d7 180 cm"
-    }
+    0.3413,
+    0.3413
    ]
   },
   {
    "id": "door_l-door_r",
    "range": [
-    0.5238,
-    0.5524
-   ],
-   "works": [
-    {
-     "artist": "In\u00e8s Laurent",
-     "title": "Undertow",
-     "year": 2020,
-     "medium": "Acrylic on canvas",
-     "size": "130 \u00d7 170 cm"
-    },
-    {
-     "artist": "Ravi Sethi",
-     "title": "City After Rain",
-     "year": 2023,
-     "medium": "Archival pigment print",
-     "size": "130 \u00d7 170 cm"
-    }
+    0.3702,
+    0.3702
    ]
   },
   {
    "id": "vol_w",
    "range": [
-    0.6048,
-    0.6286
-   ],
-   "works": [
-    {
-     "artist": "Hana Kim",
-     "title": "Homage in Ochre",
-     "year": 2022,
-     "medium": "Oil on panel",
-     "size": "200 \u00d7 140 cm"
-    }
+    0.4231,
+    0.4231
    ]
   },
   {
    "id": "vol_l",
    "range": [
-    0.7,
-    0.7238
-   ],
-   "works": [
-    {
-     "artist": "Tom\u00e1s Vidal",
-     "title": "Night Tide",
-     "year": 2024,
-     "medium": "Acrylic on canvas",
-     "size": "190 \u00d7 130 cm"
-    }
+    0.4952,
+    0.4952
    ]
   },
   {
    "id": "vault_l-vault_c-vault_r",
    "range": [
-    0.7571,
-    0.7952
-   ],
-   "works": [
-    {
-     "artist": "Haruto Sato",
-     "title": "Mended Night",
-     "year": 2020,
-     "medium": "Lacquer and gold on panel",
-     "size": "100 \u00d7 130 cm"
-    },
-    {
-     "artist": "Elena Moreau",
-     "title": "Golden Sun",
-     "year": 2019,
-     "medium": "Gold leaf and pigment on panel",
-     "size": "125 \u00d7 155 cm"
-    },
-    {
-     "artist": "Isabel Duarte",
-     "title": "Gilded Field",
-     "year": 2018,
-     "medium": "Oil and gold leaf on canvas",
-     "size": "100 \u00d7 130 cm"
-    }
+    0.5385,
+    0.5385
    ]
   },
   {
    "id": "vol_r",
    "range": [
-    0.819,
-    0.8429
-   ],
-   "works": [
-    {
-     "artist": "Priya Nair",
-     "title": "Torn Letters",
-     "year": 2023,
-     "medium": "Mixed-media collage",
-     "size": "120 \u00d7 160 cm"
-    }
+    0.5673,
+    0.5673
    ]
   },
   {
    "id": "beige_x",
    "range": [
-    0.8905,
-    0.9143
-   ],
-   "works": [
-    {
-     "artist": "Oscar Lind",
-     "title": "Arc of Days",
-     "year": 2023,
-     "medium": "Acrylic on canvas",
-     "size": "160 \u00d7 205 cm"
-    }
+    0.6154,
+    0.6154
    ]
   },
   {
    "id": "beige_field",
    "range": [
-    0.981,
-    1.01
-   ],
-   "works": [
-    {
-     "artist": "Maya Rao",
-     "title": "Blue Hour",
-     "year": 2024,
-     "medium": "Oil on canvas",
-     "size": "130 \u00d7 175 cm"
-    }
+    0.6779,
+    0.6779
    ]
+  },
+  {
+   "id": "hall_n3",
+   "range": [
+    0.851,
+    0.851
+   ]
+  },
+  {
+   "id": "part_2",
+   "range": [
+    0.8798,
+    0.8798
+   ]
+  },
+  {
+   "id": "hall_n2",
+   "range": [
+    0.9087,
+    0.9087
+   ]
+  },
+  {
+   "id": "part_1",
+   "range": [
+    0.9375,
+    0.9375
+   ]
+  },
+  {
+   "id": "hall_n1",
+   "range": [
+    0.9663,
+    0.9663
+   ]
+  },
+  {
+   "id": "hall_w",
+   "range": [
+    1.0,
+    1.0
+   ]
+  }
+ ],
+ "works": [
+  {
+   "id": "pier",
+   "pos": [
+    13.56,
+    2.31,
+    -5.545
+   ],
+   "range": [
+    0.1442,
+    0.2067
+   ],
+   "artist": "Mira Castell",
+   "title": "Ember Fields",
+   "year": 2023,
+   "medium": "Oil on canvas",
+   "size": "120 \u00d7 160 cm"
+  },
+  {
+   "id": "corridor",
+   "pos": [
+    16.9166,
+    2.31,
+    -7.7057
+   ],
+   "range": [
+    0.2067,
+    0.25
+   ],
+   "artist": "Kenji Arai",
+   "title": "Ens\u014d No. 4",
+   "year": 2022,
+   "medium": "Sumi ink on paper",
+   "size": "120 \u00d7 160 cm"
+  },
+  {
+   "id": "curtain",
+   "pos": [
+    10.21,
+    2.71,
+    -5.64
+   ],
+   "range": [
+    0.0962,
+    0.1827
+   ],
+   "artist": "Lena Okafor",
+   "title": "Evening Over the Ridge",
+   "year": 2024,
+   "medium": "Acrylic on canvas",
+   "size": "300 \u00d7 190 cm"
+  },
+  {
+   "id": "centre",
+   "pos": [
+    16.66,
+    2.61,
+    -15.9
+   ],
+   "range": [
+    0.25,
+    0.3029
+   ],
+   "artist": "Aarav Mehta",
+   "title": "Monsoon Gesture",
+   "year": 2021,
+   "medium": "Oil on linen",
+   "size": "320 \u00d7 200 cm"
+  },
+  {
+   "id": "west_0",
+   "pos": [
+    11.8,
+    2.585,
+    -11.66
+   ],
+   "range": [
+    0.274,
+    0.3221
+   ],
+   "artist": "Sofia Brandt",
+   "title": "Construct VII",
+   "year": 2023,
+   "medium": "Acrylic on canvas",
+   "size": "160 \u00d7 205 cm"
+  },
+  {
+   "id": "west_1",
+   "pos": [
+    11.8,
+    2.585,
+    -14.66
+   ],
+   "range": [
+    0.274,
+    0.3221
+   ],
+   "artist": "Noor Haddad",
+   "title": "Garden Shapes",
+   "year": 2024,
+   "medium": "Acrylic on canvas",
+   "size": "160 \u00d7 205 cm"
+  },
+  {
+   "id": "east",
+   "pos": [
+    18.6,
+    2.46,
+    -11.39
+   ],
+   "range": [
+    0.3221,
+    0.3702
+   ],
+   "artist": "Daniel Reyes",
+   "title": "Horizon Split",
+   "year": 2022,
+   "medium": "Acrylic on canvas",
+   "size": "290 \u00d7 180 cm"
+  },
+  {
+   "id": "door_l",
+   "pos": [
+    12.44,
+    2.41,
+    -9.1
+   ],
+   "range": [
+    0.3413,
+    0.399
+   ],
+   "artist": "In\u00e8s Laurent",
+   "title": "Undertow",
+   "year": 2020,
+   "medium": "Acrylic on canvas",
+   "size": "130 \u00d7 170 cm"
+  },
+  {
+   "id": "door_r",
+   "pos": [
+    16.79,
+    2.41,
+    -9.1
+   ],
+   "range": [
+    0.3413,
+    0.399
+   ],
+   "artist": "Ravi Sethi",
+   "title": "City After Rain",
+   "year": 2023,
+   "medium": "Archival pigment print",
+   "size": "130 \u00d7 170 cm"
+  },
+  {
+   "id": "vol_w",
+   "pos": [
+    15.299,
+    2.21,
+    -5.2036
+   ],
+   "range": [
+    0.399,
+    0.4471
+   ],
+   "artist": "Hana Kim",
+   "title": "Homage in Ochre",
+   "year": 2022,
+   "medium": "Oil on panel",
+   "size": "200 \u00d7 140 cm"
+  },
+  {
+   "id": "vol_l",
+   "pos": [
+    15.5138,
+    2.11,
+    -2.0993
+   ],
+   "range": [
+    0.4663,
+    0.5144
+   ],
+   "artist": "Tom\u00e1s Vidal",
+   "title": "Night Tide",
+   "year": 2024,
+   "medium": "Acrylic on canvas",
+   "size": "190 \u00d7 130 cm"
+  },
+  {
+   "id": "vol_r",
+   "pos": [
+    20.3399,
+    2.26,
+    1.9503
+   ],
+   "range": [
+    0.5385,
+    0.5913
+   ],
+   "artist": "Priya Nair",
+   "title": "Torn Letters",
+   "year": 2023,
+   "medium": "Mixed-media collage",
+   "size": "120 \u00d7 160 cm"
+  },
+  {
+   "id": "vault_c",
+   "pos": [
+    20.26,
+    2.285,
+    -2.8162
+   ],
+   "range": [
+    0.5144,
+    0.5673
+   ],
+   "artist": "Elena Moreau",
+   "title": "Golden Sun",
+   "year": 2019,
+   "medium": "Gold leaf and pigment on panel",
+   "size": "125 \u00d7 155 cm"
+  },
+  {
+   "id": "vault_l",
+   "pos": [
+    18.9769,
+    2.16,
+    -3.8928
+   ],
+   "range": [
+    0.5144,
+    0.5673
+   ],
+   "artist": "Haruto Sato",
+   "title": "Mended Night",
+   "year": 2020,
+   "medium": "Lacquer and gold on panel",
+   "size": "100 \u00d7 130 cm"
+  },
+  {
+   "id": "vault_r",
+   "pos": [
+    21.3516,
+    2.16,
+    -1.9002
+   ],
+   "range": [
+    0.5144,
+    0.5673
+   ],
+   "artist": "Isabel Duarte",
+   "title": "Gilded Field",
+   "year": 2018,
+   "medium": "Oil and gold leaf on canvas",
+   "size": "100 \u00d7 130 cm"
+  },
+  {
+   "id": "beige_x",
+   "pos": [
+    22.425,
+    2.585,
+    0.2276
+   ],
+   "range": [
+    0.5913,
+    0.6442
+   ],
+   "artist": "Oscar Lind",
+   "title": "Arc of Days",
+   "year": 2023,
+   "medium": "Acrylic on canvas",
+   "size": "160 \u00d7 205 cm"
+  },
+  {
+   "id": "beige_field",
+   "pos": [
+    28.9571,
+    2.335,
+    1.8707
+   ],
+   "range": [
+    0.6442,
+    0.7019
+   ],
+   "artist": "Maya Rao",
+   "title": "Blue Hour",
+   "year": 2024,
+   "medium": "Oil on canvas",
+   "size": "130 \u00d7 175 cm"
+  },
+  {
+   "id": "hall_n3",
+   "pos": [
+    30.5274,
+    7.21,
+    3.1884
+   ],
+   "range": [
+    0.8221,
+    0.8798
+   ],
+   "artist": "L\u00e9a Fournier",
+   "title": "Rose Garden at Noon",
+   "year": 2023,
+   "medium": "Acrylic on canvas",
+   "size": "220 \u00d7 290 cm"
+  },
+  {
+   "id": "part_2",
+   "pos": [
+    25.302,
+    6.46,
+    5.5266
+   ],
+   "range": [
+    0.851,
+    0.9087
+   ],
+   "artist": "Selin Arslan",
+   "title": "Dusk Divide",
+   "year": 2023,
+   "medium": "Acrylic on canvas",
+   "size": "320 \u00d7 200 cm"
+  },
+  {
+   "id": "hall_n2",
+   "pos": [
+    25.5482,
+    7.21,
+    -0.9897
+   ],
+   "range": [
+    0.8798,
+    0.9375
+   ],
+   "artist": "Viktor Hale",
+   "title": "Bronze Hour",
+   "year": 2022,
+   "medium": "Oil and wax on canvas",
+   "size": "220 \u00d7 290 cm"
+  },
+  {
+   "id": "part_1",
+   "pos": [
+    19.9397,
+    6.46,
+    1.0271
+   ],
+   "range": [
+    0.9087,
+    0.9663
+   ],
+   "artist": "Kai Nakamura",
+   "title": "Harbour, First Light",
+   "year": 2024,
+   "medium": "Acrylic on canvas",
+   "size": "320 \u00d7 200 cm"
+  },
+  {
+   "id": "hall_n1",
+   "pos": [
+    19.4964,
+    7.26,
+    -6.0677
+   ],
+   "range": [
+    0.9375,
+    1.0
+   ],
+   "artist": "Amara Okoye",
+   "title": "Tidal Memory",
+   "year": 2024,
+   "medium": "Oil on linen",
+   "size": "240 \u00d7 300 cm"
+  },
+  {
+   "id": "hall_w",
+   "pos": [
+    14.636,
+    7.46,
+    -6.0471
+   ],
+   "range": [
+    0.9663,
+    1.0
+   ],
+   "artist": "Alessandro Conti",
+   "title": "Gilded Night",
+   "year": 2020,
+   "medium": "Oil and gold leaf on canvas",
+   "size": "440 \u00d7 300 cm"
   }
  ],
  "vault": {
@@ -856,7 +1085,7 @@
    0.766
   ],
   "radius": 1.18,
-  "openFrom": 0.681,
-  "openTo": 0.8476
+  "openFrom": 0.4663,
+  "openTo": 0.5769
  }
 }
