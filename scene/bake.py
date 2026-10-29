@@ -219,7 +219,9 @@ def panorama(name, pos):
     cam.rotation_euler = (math.radians(90), 0, math.radians(-90))
     prev = sc.camera
     sc.camera = cam
-    sc.render.resolution_x, sc.render.resolution_y = 1024, 512
+    # (512 x 256: reflections are soft on all but the glossiest surfaces, and a
+    # quarter of the pixels downloads, parses and uploads four times faster)
+    sc.render.resolution_x, sc.render.resolution_y = 512, 256
     sc.render.resolution_percentage = 100
     sc.cycles.samples = 96
     sc.cycles.use_denoising = True

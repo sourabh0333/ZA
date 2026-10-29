@@ -7,6 +7,7 @@ export class GalleryStore {
   target = 0; // scroll progress the user asked for (0..1)
   smooth = 0; // damped progress the camera is actually at
   workEls = new Map();
+  zones = []; // parts of the building drawn only over part of the walk (Scene.jsx)
   headerEl = null;
   cursorEl = null;
   scroller = null;
@@ -24,6 +25,10 @@ export class GalleryStore {
 
   snap() {
     this.smooth = this.target;
+  }
+
+  setZones(zones) {
+    this.zones = zones;
   }
 
   setWork(id, el) {

@@ -18,7 +18,8 @@ B="tools/blender-4.5.15-windows-x64/blender.exe"
 | 4. Bake lighting + reflection maps | `$B -b scene/out/gallery.blend -P scene/bake.py -- --samples 160` | ~1.5 h |
 | 5. Export glTF | `$B -b scene/out/gallery_baked.blend -P scene/export.py` | 30 s |
 | 6. Compress for the web | `node scene/tools/optimize.mjs` | 1 min |
-| 7. Poster still | `$B -b scene/out/gallery.blend -P scene/poster.py` then `node scene/tools/poster.mjs` | 2 min |
+| 7. Prefilter the reflection maps | `node scene/tools/pmrem.mjs` | 10 s |
+| 8. Poster still (with the site running) | `node scene/tools/poster.mjs http://localhost:3002/` | 30 s |
 
 Re-bake a single group after a small change: `-- --only vault,furniture_b`.
 Pass `-- --web` to `build_scene.py` to also write the website's `path.json`;
@@ -55,8 +56,28 @@ Outputs used by the site:
 
 - `public/gallery/model/gallery.glb` geometry + material textures
 - `public/gallery/lightmaps/*.webp` baked light per group (8-bit, scaled)
-- `public/gallery/env_a.hdr`, `env_b.hdr`, `env_c.hdr` reflection panoramas (dark gallery, frame B, rooftop hall)
-- `public/gallery/poster.webp` first frame, shown until WebGL is ready
+- `public/gallery/env_a.pmrem.hdr`, `env_b…`, `env_c…` reflection maps (dark gallery, frame B, rooftop hall),
+  prefiltered by `pmrem.mjs` from the baked `env_*.hdr` panoramas (512 x 256)
+- `src/components/gallery/poster.webp` the real first frame, captured from the site by `poster.mjs` (2400 x 1200,
+  imported by `GalleryHero.jsx` so its URL is content-hashed and never served stale),
+  shown until the 3D view is ready (use a production build: the dev server adds its badge)
+
+## Loading and frame rate
+
+The hero has to open smoothly on ordinary laptops (integrated GPUs, high-DPI
+screens), so `src/components/gallery/Scene.jsx` keeps the GPU and main thread light:
+
+- every download starts at once (and `GalleryHero.jsx` starts them before the 3D code arrives)
+- no post-processing pass: AgX tone mapping and the contrast grade run in each material's own
+  shader, the vignette is a CSS overlay
+- reflection maps arrive prefiltered, so the browser never runs three.js's PMREM filter
+- while the poster is up: shaders compile in parallel, textures upload a few milliseconds per
+  frame, and one object per shader variant is drawn once (many drivers only finish a shader at
+  its first draw), so nothing compiles or uploads once the walk starts
+- rooms that walls and floors hide are not drawn (path.json `zones`, from `build_scene.py`)
+- canvas resolution starts at one pixel per CSS pixel and rises to the screen's density only
+  while frames hold 60 fps; texture anisotropy is 2x
+- visitors are animated and drawn only within 16 m of the camera
 - `src/components/gallery/data/path.json` camera path, each work's eye icon and details (placeholder credits from `lib/collection.py` `CREDITS`)
 - `src/components/gallery/data/lightmaps.json` lightmap files and intensities
 
@@ -94,10 +115,20 @@ python3 scene/people/textures.py rocketbox/Assets
 node scene/people/bake.mjs rocketbox/Assets
 ```
 
+Both take visitor ids after the Assets folder to (re)bake only those, for
+example `node scene/people/bake.mjs rocketbox/Assets bench bronze`. With
+`CHROME` set to an installed Chrome, `bake.mjs` uses it instead of
+Playwright's own Chromium (then only the `playwright` package is needed).
+On Windows Git Bash, set `MSYS_NO_PATHCONV=1` before `sparse-checkout set`,
+or the leading-slash patterns are rewritten into Windows paths.
+
 `cast.json` says which avatar and clip each visitor is; `bake.mjs` writes
 `public/gallery/people/<id>.glb` (about 8k triangles and 600 KB each). Where
 they stand, what they look at and how they are lit is set on the website, in
 `src/components/gallery/visitors.js`: nobody stands between the camera and a
 work it stops at, and the phone framing keeps its camera clear of them. The
-site loads them only once the rooms are on screen.
+visitors downstairs are prepared with the rooms, before the poster lifts; the
+rooftop's (`env: "c"`) are fetched only once the gallery is showing, since the
+walk reaches them last. They share the shaders of the ones below, so they cost
+no shader compile when they come into view.
 

@@ -45,8 +45,15 @@ export function measureGallery(scene) {
     if (each.length) boxes.set(l.id, { all: each.reduce((b, w) => b.union(w), new Box3()), each });
   }
 
-  const gallery = { boxes, solids, clearance: null };
-  gallery.clearance = KEYS.map((k) => clearance(gallery, new Vector3(...k.pos), new Vector3(...k.target)));
+  const gallery = { boxes, solids, room: null };
+  // how far back the camera may step at each key: raycasting the whole building
+  // is slow, and only narrow screens step back, so it is worked out on first need
+  Object.defineProperty(gallery, "clearance", {
+    get() {
+      gallery.room ??= KEYS.map((k) => clearance(gallery, new Vector3(...k.pos), new Vector3(...k.target)));
+      return gallery.room;
+    },
+  });
   return gallery;
 }
 

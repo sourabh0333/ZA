@@ -3,14 +3,26 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { preload } from "react-dom";
 import Lenis from "lenis";
 import { useProgress } from "@react-three/drei";
+import lightmaps from "./data/lightmaps.json";
+// imported, not linked from public/: its URL carries a hash of the file, so a new
+// capture (scene/tools/poster.mjs) can never be served from an old cache
+import posterImage from "./poster.webp";
 import { WALK } from "./path";
 import { GalleryContext, GalleryStore } from "./store";
 import { SiteHeader, StageOverlay } from "./Overlay";
 import styles from "./gallery.module.css";
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
+
+/** Starts the 3D downloads as soon as WebGL is known to work, before the scene's code has even loaded. */
+function preloadGallery() {
+  preload("/gallery/model/gallery.glb", { as: "fetch", crossOrigin: "anonymous" });
+  for (const env of ["a", "b", "c"]) preload(`/gallery/env_${env}.pmrem.hdr`, { as: "fetch", crossOrigin: "anonymous" });
+  for (const lm of Object.values(lightmaps)) preload(lm.file, { as: "image", crossOrigin: "anonymous" });
+}
 
 const noSubscribe = () => () => {};
 
@@ -41,6 +53,7 @@ export default function GalleryHero({ children }) {
   const [store] = useState(() => new GalleryStore());
   const mode = useSyncExternalStore(noSubscribe, getMode, getServerMode); // pending | webgl | static
   const [ready, setReady] = useState(false);
+  if (mode === "webgl") preloadGallery();
 
   // Scroll -> progress. Lenis smooths wheel input; the camera adds its own damping.
   useEffect(() => {
@@ -123,7 +136,7 @@ export default function GalleryHero({ children }) {
           <div className={styles.posterWrap} data-hidden={ready}>
             <Image
               className={styles.poster}
-              src="/gallery/poster.webp"
+              src={posterImage}
               alt="The material library of ZA Gallery: shelves of samples, brass spotlights and a long oak table."
               fill
               priority
@@ -131,6 +144,8 @@ export default function GalleryHero({ children }) {
             />
           </div>
           {mode === "webgl" && <Scene onReady={() => setReady(true)} />}
+          {/* the lens vignette, over both the poster and the 3D view */}
+          <div className={styles.vignette} aria-hidden="true" />
           {mode === "webgl" && <Loader hidden={ready} />}
           <StageOverlay />
           <div className={styles.srOnly}>{children}</div>

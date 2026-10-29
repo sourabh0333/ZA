@@ -72,6 +72,7 @@ export const ROOMS = pathData.rooms; // the Rooms menu's stops
 export const LABELS = pathData.labels; // the works each stop frames, for fitting the path to the screen
 export const WORKS = pathData.works; // each work's eye icon: where it sits, when it shows, who made the work
 export const VAULT = pathData.vault;
+export const ZONES = pathData.zones; // which parts of the building to draw over which stretch of the walk
 
 /** Camera position and target at a scroll progress; returns the lens shift [x, y] in px. */
 export function samplePath(progress, outPos, outTarget, outShift) {

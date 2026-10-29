@@ -1181,6 +1181,17 @@ rooms = [("Material library", TIME_OF["library"]), ("Textile wall", TIME_OF["cur
          ("Gallery room", TIME_OF["room"]), ("The vault", TIME_OF["vault"]), ("Exhibition hall", TIME_OF["beige"]),
          ("Rooftop hall", TIME_OF["roof"])]
 BRIGHT_FROM = times[WORK_TIME["vol_r"] + 1] - 0.02
+# When each part of the building can be in view (a key's margin either side),
+# so the site skips drawing rooms that walls and floors hide: the side room
+# only around the corridor, the dark gallery not once the walk has left it, the
+# rooftop (and its far city) only from the stairs on.
+KEY = 0.06
+ZONES = [
+    (["floor_a", "walls_a", "library", "furniture_a"], 0.0, times[WORK_TIME["vol_r"]] + KEY),
+    (["room"], times[WORK_TIME["curtain"]] - KEY, times[WORK_TIME["vol_l"]] + KEY),
+    (["vault"], 0.0, times[WORK_TIME["beige_x"]] + KEY),
+    (["roof", "art_roof", "sky"], times[WORK_TIME["beige_field"]] - KEY, WALK + 1.0),
+]
 # Only write the website's path when asked: while the rooms are being designed
 # the live site keeps the path that matches its baked model.
 WRITE_WEB = "--web" in sys.argv
@@ -1198,6 +1209,8 @@ path_data = {
     "hotspots": [{**h, "pos": to_three(h["pos"])} for h in hotspots],
     # the works each stop frames (the site fits them to narrow screens)
     "labels": [{"id": "-".join(works), "range": [P(t), P(t)]} for t, (_, _, works) in zip(times, STEPS) if works],
+    # which bake groups to draw over which stretch of the walk (all others always)
+    "zones": [{"groups": groups, "range": [P(max(0.0, t0)), P(t1)]} for groups, t0, t1 in ZONES],
     # every work's eye icon (hover for who made it) and when it shows
     "works": [{"id": wid, "pos": to_three(eye_at(wid)),
                "range": [P(times[max(0, WORK_TIME[wid] - 1)]), P(times[min(len(times) - 1, WORK_TIME[wid] + 1)])],

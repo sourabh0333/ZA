@@ -45,6 +45,23 @@
   inset: 0;
 }
 
+/* The lens vignette (once a post-processing effect, now free): the same falloff,
+   darkening the corners to about 40% of their light, multiplied over the view. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse farthest-corner at 50% 50%,
+    #fff 40.6%,
+    rgb(247 247 247) 56.6%,
+    rgb(229 229 229) 70.7%,
+    rgb(204 204 204) 84.9%,
+    rgb(168 168 168) 100%
+  );
+  mix-blend-mode: multiply;
+}
+
 .loader {
   position: absolute;
   left: var(--frame-x);

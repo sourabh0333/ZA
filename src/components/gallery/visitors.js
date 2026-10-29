@@ -34,6 +34,23 @@ export const PEOPLE = [
     ],
   },
   { id: "hall", pos: [25.6, 0.031, 0.35], look: [25.0, -1.0], env: "b", at: 3 },
+  // the rooftop hall: one on the bench looking out at the city through the glass
+  {
+    id: "bench",
+    pos: [20.25, 3.95, 6.47],
+    look: [16.79, 10.59],
+    env: "c",
+    at: 12,
+    shadows: [
+      [20.23, 4.39, 6.5, 0.5, 0.45, 0.45],
+      [19.82, 3.95, 6.99, 0.45, 0.35, 0.45],
+    ],
+  },
+  // one behind the second freestanding wall, beside "Bronze Hour" on the long wall
+  { id: "bronze", pos: [24.92, 3.95, 1.22], look: [25.26, -1.36], env: "c", at: 7 },
+  // a couple to the left of the monumental canvas on the end wall
+  { id: "gilded_f", pos: [13.4, 3.95, -1.39], look: [13.04, -4.3], env: "c", at: 20 },
+  { id: "gilded_m", pos: [12.38, 3.95, -1.34], look: [13.17, -4.46], env: "c", at: 5 },
 ];
 
 /** Radius of floor each figure takes up, for keeping the camera clear. */

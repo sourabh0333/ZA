@@ -1,5 +1,7 @@
 // Bakes the gallery's visitors (cast.json) into web-ready glTF files:
-//   node scene/people/bake.mjs <rocketbox Assets dir>
+//   node scene/people/bake.mjs <rocketbox Assets dir> [id ...]
+// (only the visitors named, when any are; set CHROME to use an installed
+// Chrome instead of Playwright's own Chromium)
 // Run scene/people/textures.py first. Each avatar is loaded with its idle clip
 // in headless Chromium (bake.html, three.js FBXLoader + GLTFExporter), then
 // compressed like the gallery model: meshopt geometry and animation, WebP textures.
@@ -22,7 +24,10 @@ const root = path.resolve(here, "..", "..");
 const assets = path.resolve(process.argv[2] ?? "");
 const raw = path.join(root, "scene", "out", "people", "raw");
 const output = path.join(root, "public", "gallery", "people");
-const { people } = JSON.parse(await readFile(path.join(here, "cast.json"), "utf8"));
+const only = process.argv.slice(3);
+const people = JSON.parse(await readFile(path.join(here, "cast.json"), "utf8")).people.filter(
+  (p) => !only.length || only.includes(p.id),
+);
 
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png" };
 const ROUTES = {
@@ -57,7 +62,7 @@ const server = http.createServer(async (req, res) => {
 await new Promise((done) => server.listen(0, done));
 const base = `http://localhost:${server.address().port}`;
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
 for (const p of people) {
   const page = await browser.newPage();
   await page.goto(`${base}/bake.html?id=${p.id}&avatar=${p.avatar}&anim=${p.anim}`);

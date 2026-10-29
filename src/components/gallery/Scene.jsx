@@ -3,10 +3,11 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
-import { Bloom, BrightnessContrast, EffectComposer, ToneMapping, Vignette } from "@react-three/postprocessing";
-import { ToneMappingMode } from "postprocessing";
 import {
-  EquirectangularReflectionMapping,
+  AgXToneMapping,
+  CubeUVReflectionMapping,
+  Group,
+  LinearFilter,
   LinearMipmapLinearFilter,
   ShaderChunk,
   SRGBColorSpace,
@@ -18,14 +19,15 @@ import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import lightmaps from "./data/lightmaps.json";
 import { frame, measureGallery } from "./framing";
-import { BRIGHT_FROM, FOV, samplePath, setFraming, VAULT, WORKS } from "./path";
-import People from "./People";
+import { BRIGHT_FROM, FOV, samplePath, setFraming, VAULT, WORKS, ZONES } from "./path";
+import People, { DOWNSTAIRS, DOWNSTAIRS_URLS, ROOFTOP, ROOFTOP_URLS, stagePeople } from "./People";
 import { useGallery } from "./store";
 import { VaultFx } from "./vault";
 import styles from "./gallery.module.css";
 
 const MODEL_URL = "/gallery/model/gallery.glb";
-const ENV_URLS = ["/gallery/env_a.hdr", "/gallery/env_b.hdr", "/gallery/env_c.hdr"]; // dark gallery, frame B, rooftop
+// reflection maps, prefiltered at build time (scene/tools/pmrem.mjs): dark gallery, frame B, rooftop
+const ENV_URLS = ["/gallery/env_a.pmrem.hdr", "/gallery/env_b.pmrem.hdr", "/gallery/env_c.pmrem.hdr"];
 const LM_NAMES = Object.keys(lightmaps);
 const LM_URLS = LM_NAMES.map((n) => lightmaps[n].file);
 const EXPOSURE = 1.0;
@@ -36,6 +38,63 @@ const LIGHTS_FRAGMENT_MAPS = ShaderChunk.lights_fragment_maps.replace(
   "",
 );
 
+// The look of Blender's "AgX - Medium High Contrast" renders, applied in every
+// material's own shader rather than in a post-processing pass (which cost a full
+// extra pass over the screen each frame): AgX tone mapping, then the same small
+// contrast lift the old BrightnessContrast(-0.02, 0.16) effect gave.
+// (the lift works on display values, as the effect did: in linear light it
+// would crush every shadow to black)
+ShaderChunk.tonemapping_fragment = `
+#if defined( TONE_MAPPING )
+  gl_FragColor.rgb = toneMapping( gl_FragColor.rgb );
+  vec3 graded = ( pow( max( gl_FragColor.rgb, 0.0 ), vec3( 1.0 / 2.2 ) ) - 0.52 ) / 0.84 + 0.5;
+  gl_FragColor.rgb = pow( max( graded, 0.0 ), vec3( 2.2 ) );
+#endif
+`;
+
+// Start every download at once (useLoader would otherwise suspend on each in turn).
+const withMeshopt = (loader) => loader.setMeshoptDecoder(MeshoptDecoder);
+useLoader.preload(GLTFLoader, MODEL_URL, withMeshopt);
+useLoader.preload(TextureLoader, LM_URLS);
+useLoader.preload(HDRLoader, ENV_URLS);
+useLoader.preload(GLTFLoader, DOWNSTAIRS_URLS, withMeshopt);
+
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+const UPLOAD_BUDGET = 14; // ms of texture uploads per frame while the poster is up
+const FIRST_DRAWS = 3; // shaders given their first draw per frame while the poster is up
+const MAP_SLOTS = ["map", "normalMap", "roughnessMap", "metalnessMap", "emissiveMap", "lightMap", "envMap", "alphaMap", "aoMap"];
+
+/** What the GPU driver builds a shader variant for: the material's features and the mesh's vertex layout. */
+function drawSignature(o) {
+  const m = o.material;
+  const maps = MAP_SLOTS.filter((k) => m[k]).join(",");
+  const attributes = Object.keys(o.geometry?.attributes ?? {}).sort().join(",");
+  return [m.type, maps, m.transparent, m.side, m.vertexColors, o.isSkinnedMesh, o.isSprite, m.customProgramCacheKey(),
+    JSON.stringify(m.defines ?? {}), attributes].join("|");
+}
+
+
+/** Every texture the gallery's materials use (not render targets: those live on the GPU already). */
+function texturesOf(root) {
+  const found = new Set();
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const v of Object.values(o.material)) if (v?.isTexture && !v.isRenderTargetTexture) found.add(v);
+  });
+  return [...found];
+}
+
+/** Which parts of the building to draw over which stretch of the walk (path.json "zones"). */
+function zonesOf(root) {
+  return ZONES.map((z) => {
+    const objects = [];
+    root.traverse((o) => {
+      if (z.groups.includes(o.userData.lightmap)) objects.push(o);
+    });
+    return { objects, range: z.range, shown: true };
+  });
+}
+
 function specularOnlyEnv(material) {
   material.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace("#include <lights_fragment_maps>", LIGHTS_FRAGMENT_MAPS);
@@ -45,8 +104,16 @@ function specularOnlyEnv(material) {
 
 /** Binds each mesh to its group's lightmap and reflection map; returns how many were baked. */
 function prepareGallery(scene, lmTextures, envs, gl) {
-  const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy());
-  for (const env of envs) env.mapping = EquirectangularReflectionMapping;
+  // (2x keeps floors crisp at grazing angles; 8x cost a quarter of the frame on integrated GPUs)
+  const aniso = Math.min(2, gl.capabilities.getMaxAnisotropy());
+  // already PMREM atlases: used as they are, never refiltered in the browser
+  for (const env of envs) {
+    env.mapping = CubeUVReflectionMapping;
+    env.minFilter = LinearFilter;
+    env.magFilter = LinearFilter;
+    env.generateMipmaps = false;
+    env.needsUpdate = true;
+  }
   const [envA, envB] = envs;
   const envByName = { a: envs[0], b: envs[1], c: envs[2] };
   const lmByName = {};
@@ -129,13 +196,30 @@ function syncFrame(store, camera, size, dt, flags) {
   camera.updateMatrixWorld();
   shiftLens(camera, size, sx, sy);
 
+  // draw only the parts of the building that can be in view here
+  for (const z of store.zones) {
+    const shown = p >= z.range[0] && p <= z.range[1];
+    if (shown !== z.shown) {
+      z.shown = shown;
+      for (const o of z.objects) o.visible = shown;
+    }
+  }
+
   // each work's eye, on the work's top-right corner while the work is in view
   for (const w of WORKS) {
     const el = store.workEls.get(w.id);
     if (!el) continue;
+    // (away from its stretch of the walk an eye is hidden and needs no placing)
+    if (!(p >= w.range[0] && p <= w.range[1])) {
+      if (flags.works[w.id]) {
+        flags.works[w.id] = false;
+        el.setAttribute("data-visible", "false");
+      }
+      continue;
+    }
     const inFront = placeAt(el, w.pos, camera, size);
     const onScreen = Math.abs(tmpProj.x) < 0.94 && Math.abs(tmpProj.y) < 0.9;
-    const show = p >= w.range[0] && p <= w.range[1] && inFront && onScreen;
+    const show = inFront && onScreen;
     if (show !== flags.works[w.id]) {
       flags.works[w.id] = show;
       el.setAttribute("data-visible", String(show));
@@ -164,41 +248,131 @@ function syncFrame(store, camera, size, dt, flags) {
 }
 
 function Gallery({ onReady }) {
-  const gltf = useLoader(GLTFLoader, MODEL_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder));
+  const gltf = useLoader(GLTFLoader, MODEL_URL, withMeshopt);
   const lmTextures = useLoader(TextureLoader, LM_URLS);
   const envs = useLoader(HDRLoader, ENV_URLS);
+  const figures = useLoader(GLTFLoader, DOWNSTAIRS_URLS, withMeshopt);
   const gl = useThree((s) => s.gl);
   const camera = useThree((s) => s.camera);
+  const root = useThree((s) => s.scene);
 
   const baked = useMemo(() => prepareGallery(gltf.scene, lmTextures, envs, gl), [gltf, lmTextures, envs, gl]);
   const vault = useMemo(() => (VAULT ? VaultFx.for(gltf.scene) : null), [gltf]);
   const store = useGallery();
-  const [visitors, setVisitors] = useState(false);
+  const [visitors, setVisitors] = useState(null);
+  const [shown, setShown] = useState(false);
+  const [live, setLive] = useState(false);
+  const [rooftop, setRooftop] = useState(null);
+  // (the latest callback, read when preparation ends, so a new one never restarts it)
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  });
   useFraming(gltf.scene, store);
   useFrame((_, dt) => vault?.update(store.smooth, dt));
 
+  // Everything the first frames would otherwise do at once, done while the
+  // poster is still up and spread over many frames so the page never freezes:
+  // 1. every shader compiled in parallel, off the main thread
+  // 2. every texture uploaded, a few milliseconds' worth per frame
+  // 3. every object drawn once, a few per frame (many GPU drivers finish a
+  //    shader only at its first draw), off-screen ones and the vault's smoke too
+  // Only then are the parts of the building out of view hidden and the poster faded.
   useEffect(() => {
-    // compile every shader program up front so the first scroll never hitches
-    gl.compile(gltf.scene, camera);
-  }, [gl, gltf, camera]);
+    let cancelled = false;
+    (async () => {
+      const people = stagePeople(DOWNSTAIRS, figures, envs);
+      const all = new Group();
+      all.add(gltf.scene, ...people.group);
+      await gl.compileAsync(all, camera, root);
+      all.remove(gltf.scene, ...people.group);
+      if (cancelled) return;
+      const textures = texturesOf(gltf.scene).concat(people.group.flatMap(texturesOf));
+      while (textures.length) {
+        if (cancelled) return;
+        const start = performance.now();
+        do gl.initTexture(textures.pop());
+        while (textures.length && performance.now() - start < UPLOAD_BUDGET);
+        await nextFrame();
+      }
+      // one object per shader and vertex layout (what the driver compiles for)
+      // is drawn once, whether in view or not, a few per frame; everything else
+      // waits hidden until they all have been
+      const firsts = new Map();
+      const drawables = [];
+      for (const r of [gltf.scene, ...people.group]) {
+        r.traverse((o) => {
+          if (!(o.isMesh || o.isSprite)) return;
+          drawables.push({ o, visible: o.visible, culled: o.frustumCulled });
+          const key = drawSignature(o);
+          if (!firsts.has(key)) firsts.set(key, o);
+          o.visible = false;
+          o.frustumCulled = false;
+        });
+      }
+      setVisitors(people);
+      setShown(true);
+      await nextFrame();
+      const order = [...firsts.values()];
+      for (let i = 0; i < order.length; i += FIRST_DRAWS) {
+        if (cancelled) return;
+        for (const o of order.slice(i, i + FIRST_DRAWS)) o.visible = true;
+        await nextFrame();
+      }
+      for (const d of drawables) {
+        d.o.visible = d.visible;
+        d.o.frustumCulled = d.culled;
+      }
+      store.setZones(zonesOf(gltf.scene));
+      await nextFrame();
+      await nextFrame();
+      if (cancelled) return;
+      setLive(true);
+      onReadyRef.current?.();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gl, camera, root, gltf, envs, figures, store]);
 
-  return (
+  // The rooftop's visitors, once the gallery is showing: fetched, compiled and
+  // uploaded a few milliseconds per frame. They share the shaders of the
+  // visitors below, so the first time they come into view costs nothing extra.
+  useEffect(() => {
+    if (!live) return;
+    let cancelled = false;
+    (async () => {
+      const loader = withMeshopt(new GLTFLoader());
+      const gltfs = await Promise.all(ROOFTOP_URLS.map((url) => loader.loadAsync(url)));
+      if (cancelled) return;
+      const people = stagePeople(ROOFTOP, gltfs, envs);
+      const all = new Group();
+      all.add(...people.group);
+      await gl.compileAsync(all, camera, root);
+      all.remove(...people.group);
+      const textures = people.group.flatMap(texturesOf);
+      while (textures.length) {
+        await nextFrame();
+        if (cancelled) return;
+        const start = performance.now();
+        do gl.initTexture(textures.pop());
+        while (textures.length && performance.now() - start < UPLOAD_BUDGET / 2);
+      }
+      setRooftop(people);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [live, gl, camera, root, envs]);
+
+  return shown ? (
     <>
       <primitive object={gltf.scene} />
       {baked === 0 && <PreviewLights />}
-      <Ready
-        onReady={() => {
-          onReady?.();
-          setVisitors(true);
-        }}
-      />
-      {visitors && (
-        <Suspense fallback={null}>
-          <People envs={envs} />
-        </Suspense>
-      )}
+      {visitors && <People staged={visitors} live={live} />}
+      {rooftop && <People staged={rooftop} live />}
     </>
-  );
+  ) : null;
 }
 
 /** Fits the camera path to the stage: closer to the design on wide screens, further back on narrow ones. */
@@ -250,15 +424,6 @@ function PreviewLights() {
   );
 }
 
-function Ready({ onReady }) {
-  const frames = useRef(0);
-  useFrame(() => {
-    frames.current += 1;
-    if (frames.current === 3) onReady?.();
-  });
-  return null;
-}
-
 function CameraRig() {
   const store = useGallery();
   const flags = useRef({ bright: false, works: {}, sides: {} });
@@ -266,29 +431,46 @@ function CameraRig() {
   return null;
 }
 
+const GL = {
+  antialias: true,
+  powerPreference: "high-performance",
+  stencil: false,
+  toneMapping: AgXToneMapping,
+};
+
 export default function Scene({ onReady }) {
+  // Starts at one canvas pixel per CSS pixel, which every GPU keeps smooth, and
+  // sharpens to the screen's density (up to 1.5) once frames show the headroom;
+  // it steps back down if they stop doing so.
   const [maxDpr] = useState(() => Math.min(window.devicePixelRatio || 1, 1.5));
-  const [dpr, setDpr] = useState(maxDpr);
+  const [dpr, setDpr] = useState(() => Math.min(window.devicePixelRatio || 1, 1));
+  const [live, setLive] = useState(false);
 
   return (
     <Canvas
       className={styles.canvas}
-      flat
       dpr={dpr}
       camera={{ fov: FOV, near: 0.05, far: 80, position: [0, 1.6, 0] }}
-      gl={{ antialias: false, powerPreference: "high-performance", stencil: false }}
+      gl={GL}
     >
-      <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(maxDpr)} />
+      {live && maxDpr > 1 && (
+        <PerformanceMonitor
+          // (step back below a steady 50 fps; sharpen only at a steady 59-60)
+          bounds={(refresh) => (refresh > 100 ? [70, 100] : [50, 59])}
+          flipflops={3}
+          onIncline={() => setDpr(maxDpr)}
+          onDecline={() => setDpr(1)}
+          onFallback={() => setDpr(1)}
+        />
+      )}
       <Suspense fallback={null}>
-        <Gallery onReady={onReady} />
+        <Gallery
+          onReady={() => {
+            onReady?.();
+            setLive(true);
+          }}
+        />
         <CameraRig />
-        <EffectComposer multisampling={4} enableNormalPass={false}>
-          <Bloom mipmapBlur luminanceThreshold={1.0} luminanceSmoothing={0.2} intensity={0.55} radius={0.72} />
-          <ToneMapping mode={ToneMappingMode.AGX} />
-          {/* matches Blender's "AgX - Medium High Contrast" look used for the renders */}
-          <BrightnessContrast brightness={-0.02} contrast={0.16} />
-          <Vignette offset={0.28} darkness={0.5} />
-        </EffectComposer>
       </Suspense>
     </Canvas>
   );

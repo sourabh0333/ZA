@@ -6,6 +6,10 @@
     { "id": "cardigan", "avatar": "Female_Adult_09", "anim": "f_idle_neutral_01" },
     { "id": "blazer", "avatar": "Male_Adult_07", "anim": "m_idle_neutral_03" },
     { "id": "stairs", "avatar": "Male_Adult_02", "anim": "m_sit_chair_idle_relaxed_01" },
-    { "id": "hall", "avatar": "Female_Adult_07", "anim": "f_idle_neutral_04" }
+    { "id": "hall", "avatar": "Female_Adult_07", "anim": "f_idle_neutral_04" },
+    { "id": "bench", "avatar": "Female_Adult_03", "anim": "f_sit_chair_idle_neutral_01" },
+    { "id": "bronze", "avatar": "Male_Adult_05", "anim": "m_idle_neutral_05" },
+    { "id": "gilded_f", "avatar": "Female_Adult_11", "anim": "f_idle_neutral_06" },
+    { "id": "gilded_m", "avatar": "Male_Adult_12", "anim": "m_idle_neutral_07" }
   ]
 }

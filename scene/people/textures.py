@@ -1,6 +1,6 @@
 """Converts the cast's Rocketbox textures (2048 px TGA) to PNG for bake.html.
 
-  python3 scene/people/textures.py <rocketbox Assets dir>
+  python3 scene/people/textures.py <rocketbox Assets dir> [id ...]
 
 Writes scene/out/people/tex/<avatar>/: colour and normal maps as they are,
 and the specular map turned into a glTF roughness map (in G), so skin, hair
@@ -40,7 +40,8 @@ def convert(src, out):
 
 if __name__ == "__main__":
     assets = sys.argv[1]
-    cast = json.load(open(os.path.join(HERE, "cast.json")))["people"]
+    only = sys.argv[2:]
+    cast = [p for p in json.load(open(os.path.join(HERE, "cast.json")))["people"] if not only or p["id"] in only]
     for avatar in sorted({p["avatar"] for p in cast}):
         convert(os.path.join(assets, "Avatars", "Adults", avatar, "Textures"), os.path.join(OUT, avatar))
         print("textures", avatar)

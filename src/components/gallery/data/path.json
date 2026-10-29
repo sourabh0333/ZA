@@ -674,6 +674,49 @@
    ]
   }
  ],
+ "zones": [
+  {
+   "groups": [
+    "floor_a",
+    "walls_a",
+    "library",
+    "furniture_a"
+   ],
+   "range": [
+    0.0,
+    0.5962
+   ]
+  },
+  {
+   "groups": [
+    "room"
+   ],
+   "range": [
+    0.1154,
+    0.524
+   ]
+  },
+  {
+   "groups": [
+    "vault"
+   ],
+   "range": [
+    0.0,
+    0.6442
+   ]
+  },
+  {
+   "groups": [
+    "roof",
+    "art_roof",
+    "sky"
+   ],
+   "range": [
+    0.649,
+    1.4808
+   ]
+  }
+ ],
  "works": [
   {
    "id": "pier",
