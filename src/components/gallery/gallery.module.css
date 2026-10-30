@@ -588,189 +588,62 @@
   right: var(--frame-x);
 }
 
-/* a small eye on each work's top-right corner; hovering it (or tapping, on a
-   touch screen) opens the work's details beside it */
-.artSpot {
+/* each work's wall label: small, under the work and lined up with its left
+   edge (beside it where there is no room below), fading in as the camera arrives */
+.artLabel {
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   position: absolute;
   left: 0;
   top: 0;
-  width: 22px;
-  height: 22px;
+  max-width: 230px;
+  padding: 8px 11px 9px;
+  background: rgb(14 12 10 / 0.58);
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  border-left: 2px solid var(--sand);
+  color: var(--paper);
+  pointer-events: none;
   opacity: 0;
   visibility: hidden;
   will-change: transform, opacity;
-  transition: opacity 400ms ease, visibility 0s linear 400ms;
+  transition: opacity 350ms ease, visibility 0s linear 350ms;
 }
 
-.artSpot[data-visible="true"] {
+.artLabel[data-visible="true"] {
   opacity: 1;
   visibility: visible;
-  transition: opacity 400ms ease, visibility 0s;
+  transition: opacity 600ms ease 150ms, visibility 0s;
 }
 
-/* the open one rises above its neighbours' eyes */
-.artSpot:hover,
-.artSpot:focus-within,
-.artSpot[data-open="true"] {
-  z-index: 2;
+.artLabel > * {
+  transform: translateY(4px);
+  transition: transform 300ms ease;
 }
 
-.artEye {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  color: var(--paper);
-  background: rgb(14 12 10 / 0.55);
-  border: 1px solid rgb(244 239 231 / 0.55);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  transition: transform 300ms cubic-bezier(0.2, 0.7, 0.2, 1), background 300ms ease, color 300ms ease,
-    border-color 300ms ease;
-}
-
-/* a soft ring that breathes, so the eye is found without shouting */
-.artEye::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: 50%;
-  border: 1px solid rgb(244 239 231 / 0.5);
-  animation: breathe 2.8s ease-out infinite;
-  pointer-events: none;
-}
-
-@keyframes breathe {
-  0% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  70%,
-  100% {
-    transform: scale(1.8);
-    opacity: 0;
-  }
-}
-
-.artEye svg {
-  width: 12px;
-  height: 12px;
-}
-
-.artSpot:hover .artEye,
-.artSpot[data-open="true"] .artEye,
-.artEye:focus-visible {
-  transform: scale(1.15);
-  color: #1d1914;
-  background: var(--sand);
-  border-color: var(--sand);
-}
-
-.artSpot:hover .artEye::after,
-.artSpot[data-open="true"] .artEye::after {
-  animation: none;
-  opacity: 0;
-}
-
-.artCard {
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  position: absolute;
-  top: -12px;
-  left: calc(100% + 12px);
-  width: 260px;
-  padding: 18px 20px 16px;
-  background: rgb(14 12 10 / 0.66);
-  backdrop-filter: blur(16px) saturate(1.15);
-  -webkit-backdrop-filter: blur(16px) saturate(1.15);
-  border: 1px solid rgb(244 239 231 / 0.16);
-  color: var(--paper);
-  box-shadow: 0 18px 40px rgb(0 0 0 / 0.35);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(-8px);
-  pointer-events: none;
-  transition: opacity 250ms ease, transform 350ms var(--ease), visibility 0s linear 350ms;
-}
-
-.artSpot[data-side="left"] .artCard {
-  left: auto;
-  right: calc(100% + 12px);
-  transform: translateX(8px);
-}
-
-/* no room either side (a phone held upright): below the eye, kept on screen */
-.artSpot[data-side="below"] .artCard {
-  top: calc(100% + 10px);
-  left: var(--card-x, 0);
-  transform: translateY(-8px);
-}
-
-.artSpot:hover .artCard,
-.artSpot:focus-within .artCard,
-.artSpot[data-open="true"] .artCard {
-  opacity: 1;
-  visibility: visible;
+.artLabel[data-visible="true"] > * {
   transform: none;
-  transition: opacity 350ms ease, transform 500ms var(--ease), visibility 0s;
+  transition: transform 800ms var(--ease) 150ms;
 }
 
-.artCardNo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--sand);
-  font-variant-numeric: tabular-nums;
-}
-
-.artCardNo span {
-  color: rgb(244 239 231 / 0.4);
-}
-
-.artCardNo::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: rgb(244 239 231 / 0.14);
-}
-
-.artCardTitle {
-  font-size: 19px;
-  line-height: 1.2;
-}
-
-.artCardArtist {
-  margin-top: 4px;
+.artLabelTitle {
   font-size: 13px;
-  color: rgb(244 239 231 / 0.8);
+  line-height: 1.25;
 }
 
-.artCardFacts {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 7px 16px;
-  margin-top: 14px;
-  padding-top: 13px;
-  border-top: 1px solid rgb(244 239 231 / 0.12);
-  font-size: 12px;
+.artLabelArtist {
+  margin-top: 1px;
+  font-size: 11px;
+  color: rgb(244 239 231 / 0.78);
 }
 
-.artCardFacts dt {
-  padding-top: 1px;
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgb(244 239 231 / 0.45);
-}
-
-.artCardFacts dd {
-  color: rgb(244 239 231 / 0.88);
+.artLabelMeta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 5px;
+  margin-top: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.03em;
+  color: rgb(244 239 231 / 0.55);
 }
 
 .bottomLeft {
@@ -929,9 +802,6 @@
     height: 40px;
   }
 
-  .artCard {
-    width: min(236px, 64vw);
-  }
 }
 
 /* touch screens: a finger-sized target */
@@ -939,12 +809,6 @@
   .cornerButton {
     width: 32px;
     height: 32px;
-  }
-
-  .artEye::before {
-    content: "";
-    position: absolute;
-    inset: -11px;
   }
 }
 

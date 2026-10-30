@@ -22,7 +22,7 @@ import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import lightmaps from "./data/lightmaps.json";
 import { frame, measureGallery } from "./framing";
-import { BRIGHT_FROM, FOV, samplePath, setFraming, VAULT, WORKS, ZONES } from "./path";
+import { BRIGHT_FROM, FOV, LABELS, samplePath, setFraming, VAULT, WORKS, ZONES } from "./path";
 import People, { EARLY, EARLY_URLS, LATER, LATER_URLS, stagePeople } from "./People";
 import { useGallery } from "./store";
 import { VaultFx } from "./vault";
@@ -204,15 +204,96 @@ const tmpPos = new Vector3();
 const tmpTarget = new Vector3();
 const tmpShift = [0, 0];
 const tmpProj = new Vector3();
-const EDGE = 16; // px the details card keeps from the screen's edges
+const EDGE = 16; // px a wall label keeps from the screen's edges
+const LABEL_GAP = 12; // px between a work's frame and its label
+const STACK_GAP = 4; // px between labels stacked under one another
+const BOTTOM_BAR = 56; // px the Rooms bar takes at the foot of the stage
 
-/** Puts an element's centre on a point in the scene; false when the point is behind the camera. */
-function placeAt(el, pos, camera, size) {
-  tmpProj.set(pos[0], pos[1], pos[2]).project(camera);
-  const x = ((tmpProj.x + 1) / 2) * size.width;
-  const y = ((1 - tmpProj.y) / 2) * size.height;
-  el.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
-  return tmpProj.z < 1;
+// Each work's wall label shows from halfway to its stop until halfway on to the
+// next: it is up while the camera arrives at the work and holds on it.
+const LABEL_SHOWS = Object.fromEntries(
+  WORKS.map((w) => {
+    const at = LABELS.find((l) => l.id.split("-").includes(w.id))?.range[0] ?? (w.range[0] + w.range[1]) / 2;
+    return [w.id, [(w.range[0] + at) / 2, (at + w.range[1]) / 2]];
+  }),
+);
+const corner = new Vector3();
+
+/**
+ * Where a work's frame is on screen, in px: { left, right, top, bottom, seen }
+ * (seen: the share of it inside the screen), or null when any of it is behind
+ * the camera.
+ */
+function frameOnScreen(corners, camera, size) {
+  const f = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
+  for (const c of corners) {
+    corner.copy(c);
+    if (tmpProj.copy(corner).applyMatrix4(camera.matrixWorldInverse).z > -0.1) return null;
+    corner.project(camera);
+    const x = ((corner.x + 1) / 2) * size.width;
+    const y = ((1 - corner.y) / 2) * size.height;
+    f.left = Math.min(f.left, x);
+    f.right = Math.max(f.right, x);
+    f.top = Math.min(f.top, y);
+    f.bottom = Math.max(f.bottom, y);
+  }
+  const inX = Math.max(0, Math.min(f.right, size.width) - Math.max(f.left, 0));
+  const inY = Math.max(0, Math.min(f.bottom, size.height) - Math.max(f.top, 0));
+  f.seen = (inX * inY) / ((f.right - f.left) * (f.bottom - f.top));
+  return f;
+}
+
+/** Where a work's label goes: under its frame, left-aligned with it; beside it where there is no room below. */
+function labelSpot(el, f, size) {
+  const w = el.offsetWidth;
+  const h = el.offsetHeight;
+  const floor = size.height - BOTTOM_BAR;
+  let x = Math.min(Math.max(f.left, EDGE), size.width - w - EDGE);
+  let y = f.bottom + LABEL_GAP;
+  if (y + h > floor) {
+    // no room below: beside the frame, level with its foot, on whichever side has room
+    y = Math.min(f.bottom - h, floor - h);
+    if (f.right + LABEL_GAP + w <= size.width - EDGE) x = f.right + LABEL_GAP;
+    else if (f.left - LABEL_GAP - w >= EDGE) x = f.left - LABEL_GAP - w;
+    else y = floor - h; // (a work wider than the screen: over its foot)
+  }
+  return { el, x, y, w, h };
+}
+
+/**
+ * Lays out the labels showing together (works hung close, like the vault's):
+ * any that would overlap share one line, side by side in the order of their
+ * works, the line moved left as a whole if it runs off the screen, or
+ * stacked if even that will not fit.
+ */
+function placeLabels(spots, size) {
+  spots.sort((a, b) => a.x - b.x);
+  for (let i = 1; i < spots.length; i++) {
+    const prev = spots[i - 1];
+    const s = spots[i];
+    if (s.x < prev.x + prev.w + LABEL_GAP && s.y < prev.y + prev.h && prev.y < s.y + s.h) {
+      s.x = prev.x + prev.w + LABEL_GAP;
+      s.y = prev.y = Math.max(prev.y, s.y);
+    }
+  }
+  const last = spots[spots.length - 1];
+  const over = last ? last.x + last.w + EDGE - size.width : 0;
+  if (over > 0 && spots[0].x - over < EDGE) {
+    // too wide for the screen (a phone): stacked under one another instead,
+    // lifted if the stack would run into the Rooms bar
+    const wide = Math.max(...spots.map((s) => s.w));
+    const x = Math.min(Math.max(spots[0].x, EDGE), size.width - wide - EDGE);
+    const tall = spots.reduce((sum, s) => sum + s.h + STACK_GAP, -STACK_GAP);
+    let y = Math.min(spots[0].y, size.height - BOTTOM_BAR - tall);
+    for (const s of spots) {
+      s.x = x;
+      s.y = y;
+      y += s.h + STACK_GAP;
+    }
+  } else if (over > 0) {
+    for (const s of spots) s.x -= over;
+  }
+  for (const s of spots) s.el.style.transform = `translate3d(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px, 0)`;
 }
 
 /** Lens shift: keeps the work centred in the part of the screen the header and bar leave clear. */
@@ -245,41 +326,23 @@ function syncFrame(store, camera, size, dt, flags) {
     }
   }
 
-  // each work's eye, on the work's top-right corner while the work is in view
+  // each work's wall label, while the camera arrives at the work and holds on it
+  const spots = [];
   for (const w of WORKS) {
     const el = store.workEls.get(w.id);
     if (!el) continue;
-    // (away from its stretch of the walk an eye is hidden and needs no placing)
-    if (!(p >= w.range[0] && p <= w.range[1])) {
-      if (flags.works[w.id]) {
-        flags.works[w.id] = false;
-        el.setAttribute("data-visible", "false");
-      }
-      continue;
-    }
-    const inFront = placeAt(el, w.pos, camera, size);
-    const onScreen = Math.abs(tmpProj.x) < 0.94 && Math.abs(tmpProj.y) < 0.9;
-    const show = inFront && onScreen;
+    const [from, to] = LABEL_SHOWS[w.id];
+    const corners = store.workFrames.get(w.id);
+    const f = corners && p >= from && p <= to ? frameOnScreen(corners, camera, size) : null;
+    // (shown only while most of the work is on screen)
+    const show = Boolean(f) && f.seen > 0.6;
     if (show !== flags.works[w.id]) {
       flags.works[w.id] = show;
       el.setAttribute("data-visible", String(show));
     }
-    // open the details outward, onto the wall; on the other side if that runs off
-    // the screen; below the eye, kept on screen, if neither side has room (phones)
-    if (show) {
-      const x = ((tmpProj.x + 1) / 2) * size.width;
-      const cardW = el.lastChild.offsetWidth + 12;
-      const side = x + cardW + EDGE <= size.width ? "right" : x - cardW >= EDGE ? "left" : "below";
-      if (side !== flags.sides[w.id]) {
-        flags.sides[w.id] = side;
-        el.setAttribute("data-side", side);
-      }
-      if (side === "below") {
-        const left = Math.min(Math.max(x - cardW / 2, EDGE), size.width - cardW - EDGE);
-        el.style.setProperty("--card-x", `${(left - x + el.offsetWidth / 2).toFixed(1)}px`);
-      }
-    }
+    if (show) spots.push(labelSpot(el, f, size));
   }
+  placeLabels(spots, size);
   const bright = p > BRIGHT_FROM;
   if (bright !== flags.bright && store.headerEl) {
     flags.bright = bright;
@@ -454,16 +517,20 @@ function useFraming(scene, store) {
   const size = useThree((s) => s.size);
   const get = useThree((s) => s.get);
   const gallery = useMemo(() => measureGallery(scene), [scene]);
+  useEffect(() => store.setWorkFrames(gallery.faces), [gallery, store]);
 
   useEffect(() => {
     let cancelled = false;
     const apply = () => {
       if (cancelled) return;
       const frameX = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--frame-x")) || 16;
+      // (the tallest wall label, and the gap between it and its work)
+      const label = Math.max(0, ...[...store.workEls.values()].map((el) => el.offsetHeight)) + 12;
       const layout = {
         header: store.headerEl?.offsetHeight ?? 64,
         side: frameX + 8,
         bottomBar: 56,
+        label,
       };
       const { fov, keys, shifts } = frame(gallery, size.width, size.height, layout);
       setFraming(keys, shifts);
@@ -474,7 +541,7 @@ function useFraming(scene, store) {
       }
     };
     apply();
-    // the header's height settles once the web font arrives
+    // the header's and labels' heights settle once the web font arrives
     document.fonts?.ready.then(apply);
     return () => {
       cancelled = true;
@@ -500,7 +567,7 @@ function PreviewLights() {
 
 function CameraRig() {
   const store = useGallery();
-  const flags = useRef({ bright: false, works: {}, sides: {} });
+  const flags = useRef({ bright: false, works: {} });
   useFrame((state, dt) => syncFrame(store, state.camera, state.size, dt, flags.current));
   return null;
 }

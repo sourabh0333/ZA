@@ -70,7 +70,7 @@ export const WALK = pathData.walk; // the walk's length; the hero's scroll heigh
 export const BRIGHT_FROM = pathData.brightFrom; // where the rooms turn light (the nav tab appears)
 export const ROOMS = pathData.rooms; // the Rooms menu's stops
 export const LABELS = pathData.labels; // the works each stop frames, for fitting the path to the screen
-export const WORKS = pathData.works; // each work's eye icon: where it sits, when it shows, who made the work
+export const WORKS = pathData.works; // each work: its stretch of the walk and who made it (its wall label)
 export const VAULT = pathData.vault;
 export const ZONES = pathData.zones; // which parts of the building to draw over which stretch of the walk
 
