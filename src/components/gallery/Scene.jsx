@@ -208,6 +208,9 @@ const EDGE = 16; // px a wall label keeps from the screen's edges
 const LABEL_GAP = 12; // px between a work's frame and its label
 const STACK_GAP = 4; // px between labels stacked under one another
 const BOTTOM_BAR = 56; // px the Rooms bar takes at the foot of the stage
+// scroll progress over which the first view's welcome fades out
+const WELCOME_FROM = 0.002;
+const WELCOME_TO = 0.02;
 
 // Each work's wall label shows from halfway to its stop until halfway on to the
 // next: it is up while the camera arrives at the work and holds on it.
@@ -343,6 +346,13 @@ function syncFrame(store, camera, size, dt, flags) {
     if (show) spots.push(labelSpot(el, f, size));
   }
   placeLabels(spots, size);
+  // the welcome fades as the walk begins, and is gone a few steps in
+  const away = Math.min(1, Math.max(0, (p - WELCOME_FROM) / (WELCOME_TO - WELCOME_FROM)));
+  if (store.welcomeEl && away !== flags.away) {
+    flags.away = away;
+    store.welcomeEl.style.setProperty("--away", away.toFixed(3));
+  }
+
   const bright = p > BRIGHT_FROM;
   if (bright !== flags.bright && store.headerEl) {
     flags.bright = bright;
@@ -567,7 +577,7 @@ function PreviewLights() {
 
 function CameraRig() {
   const store = useGallery();
-  const flags = useRef({ bright: false, works: {} });
+  const flags = useRef({ bright: false, works: {}, away: -1 });
   useFrame((state, dt) => syncFrame(store, state.camera, state.size, dt, flags.current));
   return null;
 }
