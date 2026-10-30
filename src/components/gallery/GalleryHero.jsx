@@ -12,7 +12,7 @@ import posterImage from "./poster.webp";
 import { WALK } from "./path";
 import { GalleryContext, GalleryStore } from "./store";
 import Intro from "./Intro";
-import { SiteHeader, StageOverlay } from "./Overlay";
+import { SiteHeader, StageOverlay, Welcome } from "./Overlay";
 import styles from "./gallery.module.css";
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
@@ -152,6 +152,7 @@ export default function GalleryHero({ children }) {
           {mode === "webgl" && <Scene onReady={() => setReady(true)} />}
           {/* the lens vignette, over both the poster and the 3D view */}
           <div className={styles.vignette} aria-hidden="true" />
+          <Welcome shown={entered || mode === "static"} />
           <StageOverlay />
           <div className={styles.srOnly}>{children}</div>
         </div>

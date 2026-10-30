@@ -10,6 +10,7 @@ export class GalleryStore {
   workFrames = new Map(); // each work's frame corners in the scene (framing.js)
   zones = []; // parts of the building drawn only over part of the walk (Scene.jsx)
   headerEl = null;
+  welcomeEl = null;
   cursorEl = null;
   scroller = null;
   prep = 0; // how far the 3D view has got preparing itself, once downloaded (0..1)
@@ -53,6 +54,10 @@ export class GalleryStore {
   setWork(id, el) {
     if (el) this.workEls.set(id, el);
     else this.workEls.delete(id);
+  }
+
+  setWelcome(el) {
+    this.welcomeEl = el;
   }
 
   setHeader(el) {

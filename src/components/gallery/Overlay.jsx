@@ -72,6 +72,30 @@ export function SiteHeader() {
   );
 }
 
+/**
+ * The welcome over the first view: the gallery's name and an invitation to
+ * walk in, in the intro's lettering, in the dark above the reception wall.
+ * It rises in as the intro lifts (shown) and fades as the walk begins
+ * (Scene.jsx sets --away from the camera's progress).
+ */
+export function Welcome({ shown }) {
+  const store = useGallery();
+  return (
+    <div className={styles.welcomeWrap} data-shown={shown} ref={(el) => store.setWelcome(el)} aria-hidden="true">
+      {/* (a soft dark from the top, so the gold reads over a lit wall on wide screens) */}
+      <div className={styles.welcomeShade} />
+      <div className={styles.welcome}>
+        <p className={styles.welcomeRule}>
+          <span>Zigguratss &middot; Art Gallery</span>
+        </p>
+        <p className={styles.welcomeTitle}>Step Inside the Gallery</p>
+        <p className={styles.welcomeSub}>Scroll to walk through six rooms of original art</p>
+        <span className={styles.welcomeCue} />
+      </div>
+    </div>
+  );
+}
+
 export function StageOverlay() {
   const store = useGallery();
   const [roomsOpen, setRoomsOpen] = useState(false);

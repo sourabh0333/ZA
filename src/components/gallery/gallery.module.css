@@ -588,6 +588,191 @@
   right: var(--frame-x);
 }
 
+/* the welcome over the first view, in the intro's lettering: in the dark above
+   the reception wall, rising in as the intro lifts, fading as the walk begins */
+.welcomeWrap {
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --gold: linear-gradient(to right, #8a6a2f, #d8b46a 45%, #f1dca6 55%, #b8924a);
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: calc(1 - var(--away, 0));
+}
+
+.welcomeShade {
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc(var(--header-h) + clamp(170px, 34vh, 320px));
+  background: linear-gradient(to bottom, rgb(8 7 6 / 0.82), rgb(8 7 6 / 0.55) 55%, rgb(8 7 6 / 0));
+  opacity: 0;
+  transition: opacity 1400ms ease 300ms;
+}
+
+.welcomeWrap[data-shown="true"] .welcomeShade {
+  opacity: 1;
+}
+
+.welcome {
+  position: absolute;
+  top: calc(var(--header-h) + clamp(16px, 5vh, 52px));
+  left: 50%;
+  width: min(760px, calc(100% - 2 * var(--frame-x) - 32px));
+  display: grid;
+  justify-items: center;
+  gap: clamp(8px, 1.6vh, 14px);
+  text-align: center;
+  color: var(--paper);
+  transform: translate(-50%, calc(var(--away, 0) * -28px));
+}
+
+.welcome > * {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.welcomeWrap[data-shown="true"] .welcome > * {
+  animation: welcomeIn 1100ms var(--ease) both;
+}
+
+/* (after the intro's bands have begun to leave, one line after another) */
+.welcomeWrap[data-shown="true"] .welcome > :nth-child(1) {
+  animation-delay: 450ms;
+}
+
+.welcomeWrap[data-shown="true"] .welcome > :nth-child(2) {
+  animation-delay: 600ms;
+}
+
+.welcomeWrap[data-shown="true"] .welcome > :nth-child(3) {
+  animation-delay: 780ms;
+}
+
+.welcomeWrap[data-shown="true"] .welcome > :nth-child(4) {
+  animation-delay: 950ms;
+}
+
+@keyframes welcomeIn {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.welcomeRule {
+  display: grid;
+  grid-template-columns: minmax(24px, 72px) auto minmax(24px, 72px);
+  align-items: center;
+  gap: 14px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--sand);
+}
+
+.welcomeRule span {
+  /* (cancels the last letter's spacing, so the label sits centred) */
+  margin-right: -0.38em;
+}
+
+.welcomeRule::before,
+.welcomeRule::after {
+  content: "";
+  height: 1px;
+  background: linear-gradient(to right, rgb(216 180 106 / 0), rgb(216 180 106 / 0.75));
+}
+
+.welcomeRule::after {
+  background: linear-gradient(to left, rgb(216 180 106 / 0), rgb(216 180 106 / 0.75));
+}
+
+.welcomeTitle {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(22px, 4.6vw, 54px);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: 0.08em;
+  background: var(--gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.35);
+}
+
+.welcomeSub {
+  font-size: clamp(11px, 1.2vw, 14px);
+  letter-spacing: 0.06em;
+  color: rgb(244 239 231 / 0.72);
+}
+
+/* a hairline with a drop of gold running down it: scroll */
+.welcomeCue {
+  position: relative;
+  width: 1px;
+  height: clamp(22px, 4vh, 40px);
+  margin-top: 2px;
+  overflow: hidden;
+  background: rgb(244 239 231 / 0.18);
+}
+
+.welcomeCue::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 40%;
+  background: #d8b46a;
+  animation: welcomeCue 2.2s var(--ease) infinite;
+}
+
+@keyframes welcomeCue {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(260%);
+  }
+}
+
+/* wide screens: the reception's sign and pendants fill the top of the view,
+   so the welcome sits in the lower third, over the floor before the desk */
+@media (orientation: landscape) {
+  .welcome {
+    top: auto;
+    bottom: clamp(44px, 9vh, 96px);
+    transform: translate(-50%, calc(var(--away, 0) * 28px));
+  }
+
+  .welcomeShade {
+    inset: auto 0 0;
+    height: clamp(170px, 40vh, 380px);
+    background: linear-gradient(to top, rgb(8 7 6 / 0.85), rgb(8 7 6 / 0.55) 50%, rgb(8 7 6 / 0));
+  }
+
+  .welcomeCue {
+    display: none;
+  }
+}
+
+/* a phone on its side: so little height that the welcome keeps to two lines */
+@media (orientation: landscape) and (max-height: 560px) {
+  .welcome {
+    bottom: 46px;
+    gap: 6px;
+  }
+
+  .welcomeTitle {
+    font-size: 19px;
+  }
+
+  .welcomeSub {
+    display: none;
+  }
+}
+
 /* each work's wall label: small, under the work and lined up with its left
    edge (beside it where there is no room below), fading in as the camera arrives */
 .artLabel {

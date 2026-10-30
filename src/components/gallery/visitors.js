@@ -42,16 +42,18 @@ export const PEOPLE = [
     walk: { to: [0.6, -3.4], looks: [[-5.3, -5.75], [0.7, -5.15]], pause: 1, start: 0.08 },
   },
   {
-    // on the left-hand seat, sunk a little into its cushion (lower than 0.44 m)
+    // upright on the sofa's left-hand seat (cushion 0.43 m), back near the
+    // backrest, both feet planted between the sofa and the drum table (the
+    // seated clip keeps them 0.32-0.43 m in front of the hips)
     id: "lounge",
-    pos: [2.77, -0.1, -5.37],
-    look: [2.77, -3.0],
+    pos: [2.85, -0.005, -5.3],
+    look: [2.85, -3.0],
     env: "a",
     at: 4,
     first: true,
     shadows: [
-      [2.77, 0.435, -5.4, 0.5, 0.45, 0.45],
-      [2.77, 0, -4.8, 0.45, 0.35, 0.45],
+      [2.85, 0.43, -5.3, 0.5, 0.45, 0.45],
+      [2.85, 0.012, -4.9, 0.45, 0.3, 0.5],
     ],
   },
   // the textile wall: two visitors either side of the canvas, a step back; she

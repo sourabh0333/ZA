@@ -4,7 +4,7 @@
     { "id": "receptionist", "group": "Professions", "avatar": "Business_Female_01", "anim": "f_gestic_talk_neutral_01" },
     { "id": "guest", "avatar": "Male_Adult_08", "anim": "m_gestic_listen_accept_01" },
     { "id": "stroller", "avatar": "Female_Adult_05", "anim": ["f_walk_stroll_01", "f_idle_look_around_01"] },
-    { "id": "lounge", "avatar": "Male_Adult_14", "anim": "m_sit_chair_idle_relaxed_01" },
+    { "id": "lounge", "avatar": "Male_Adult_14", "anim": "m_sit_chair_idle_neutral_01" },
     { "id": "textile", "avatar": "Female_Adult_14", "anim": "f_take_picture", "prop": { "kind": "camera", "at": 0.4 } },
     { "id": "elder", "avatar": "Male_Adult_03", "anim": "m_idle_neutral_02" },
     { "id": "cardigan", "avatar": "Female_Adult_09", "anim": "f_gestic_listen_accept_01" },
