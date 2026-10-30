@@ -27,12 +27,15 @@ const rel = new Vector3();
 export function measureGallery(scene) {
   scene.updateMatrixWorld(true);
   const works = new Map();
+  const faces = new Map();
   const solids = [];
   scene.traverse((obj) => {
     if (!obj.isMesh) return;
     solids.push(obj);
     const name = obj.material.name || "";
-    if (name.startsWith("art_")) works.set(name.slice(4), new Box3().setFromObject(obj).expandByScalar(FRAME));
+    if (!name.startsWith("art_")) return;
+    works.set(name.slice(4), new Box3().setFromObject(obj).expandByScalar(FRAME));
+    faces.set(name.slice(4), frameCorners(obj));
   });
 
   // each stop's works, and all of them together
@@ -45,7 +48,8 @@ export function measureGallery(scene) {
     if (each.length) boxes.set(l.id, { all: each.reduce((b, w) => b.union(w), new Box3()), each });
   }
 
-  const gallery = { boxes, solids, room: null };
+  // (faces: each work's frame corners, for placing its wall label)
+  const gallery = { boxes, faces, solids, room: null };
   // how far back the camera may step at each key: raycasting the whole building
   // is slow, and only narrow screens step back, so it is worked out on first need
   Object.defineProperty(gallery, "clearance", {
@@ -55,6 +59,36 @@ export function measureGallery(scene) {
     },
   });
   return gallery;
+}
+
+/**
+ * The four corners of a work's frame, on its wall (top-left, top-right,
+ * bottom-right, bottom-left as you face it): its painted face, which wraps
+ * round the canvas's edges, widened by the frame.
+ */
+function frameCorners(mesh) {
+  const pos = mesh.geometry.attributes.position;
+  const nor = mesh.geometry.attributes.normal;
+  // (the sides' normals cancel in pairs, leaving the face's)
+  const n = new Vector3();
+  for (let i = 0; i < nor.count; i++) n.add(rel.fromBufferAttribute(nor, i));
+  n.transformDirection(mesh.matrixWorld).setY(0).normalize();
+  const along = new Vector3().crossVectors(up, n); // left to right, facing the work
+  const lo = [Infinity, Infinity];
+  const hi = [-Infinity, -Infinity];
+  let front = -Infinity;
+  for (let i = 0; i < pos.count; i++) {
+    rel.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+    const u = rel.dot(along);
+    lo[0] = Math.min(lo[0], u);
+    hi[0] = Math.max(hi[0], u);
+    lo[1] = Math.min(lo[1], rel.y);
+    hi[1] = Math.max(hi[1], rel.y);
+    front = Math.max(front, rel.dot(n));
+  }
+  const at = (u, y) => along.clone().multiplyScalar(u).addScaledVector(n, front).setY(y);
+  const [u0, y0, u1, y1] = [lo[0] - FRAME, lo[1] - FRAME, hi[0] + FRAME, hi[1] + FRAME];
+  return [at(u0, y1), at(u1, y1), at(u1, y0), at(u0, y0)];
 }
 
 const ray = new Raycaster();
@@ -115,7 +149,8 @@ const keyLabel = KEYS.map((k) => LABELS.find((l) => k.p >= l.range[0] - 1e-4 && 
 
 /**
  * The path fitted to a stage of width x height.
- * layout, in stage px: { header, side, bottomBar }.
+ * layout, in stage px: { header, side, bottomBar, label } (label: the room a
+ * work's wall label takes under it, kept clear at the keys that frame a work).
  */
 export function frame(gallery, width, height, layout) {
   const aspect = width / height;
@@ -126,7 +161,12 @@ export function frame(gallery, width, height, layout) {
 
   const side = layout.side;
   const top = layout.header + GAP;
-  const clearArea = () => ({ x0: side, x1: width - side, y0: top, y1: height - layout.bottomBar });
+  const clearArea = (stop) => ({
+    x0: side,
+    x1: width - side,
+    y0: top,
+    y1: height - layout.bottomBar - (stop ? layout.label : 0),
+  });
 
   // widen the lens until the clear area spans the designed width, within reason
   const open = clearArea();
@@ -134,8 +174,8 @@ export function frame(gallery, width, height, layout) {
   const fov = MathUtils.clamp(MathUtils.radToDeg(2 * needHalfV), FOV, MAX_FOV);
   const f = height / 2 / Math.tan(MathUtils.degToRad(fov / 2)); // focal length, px
 
-  const areas = KEYS.map(() => {
-    const area = clearArea();
+  const areas = KEYS.map((_, i) => {
+    const area = clearArea(Boolean(keyLabel[i]));
     // tangents of the clear area's half-width and half-height, seen from the lens
     return { ...area, tanX: (area.x1 - area.x0) / 2 / f, tanY: (area.y1 - area.y0) / 2 / f };
   });

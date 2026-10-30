@@ -94,7 +94,7 @@ screens), so `src/components/gallery/Scene.jsx` keeps the GPU and main thread li
 - canvas resolution starts at one pixel per CSS pixel and rises to the screen's density only
   while frames hold 60 fps; texture anisotropy is 2x
 - visitors are animated and drawn only within 16 m of the camera
-- `src/components/gallery/data/path.json` camera path, each work's eye icon and details (placeholder credits from `lib/collection.py` `CREDITS`)
+- `src/components/gallery/data/path.json` camera path, each work's wall label details (placeholder credits from `lib/collection.py` `CREDITS`)
 - `src/components/gallery/data/lightmaps.json` lightmap files and intensities
 
 The camera path is defined once in `build_scene.py` (`keys`) and interpolated
@@ -102,10 +102,11 @@ identically in Blender (`lib/camera_path.py`) and the browser (`path.js`).
 It passes square on to every artwork without stopping: `art_view` places the
 camera far enough back to fit a work with a margin, and `STEPS` lists the keys
 with the time between them. The walk's length (`WALK`), the Rooms menu stops,
-the point where the rooms turn light and each work's eye icon (where it sits,
-when it shows, its credits) are written to `path.json` too, so the site
-follows any change to the path. Hovering an eye (tapping, on a touch screen)
-opens that work's details.
+the point where the rooms turn light and each work's stretch of the walk and
+credits are written to `path.json` too, so the site follows any change to the
+path. Each work's small wall label shows by itself as the camera arrives at it,
+under the work (beside it where there is no room below), placed from the
+work's frame corners, which the site measures from the model.
 
 The path is composed for a 4:3 screen. On portrait screens and phones on
 their side the site refits it (`src/components/gallery/framing.js`): it widens

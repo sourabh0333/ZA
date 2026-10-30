@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ROOMS, WORKS } from "./path";
 import { useGallery } from "./store";
-import { CartIcon, ExpandIcon, EyeIcon, PlanIcon, SearchIcon, UserIcon } from "./icons";
+import { CartIcon, ExpandIcon, PlanIcon, SearchIcon, UserIcon } from "./icons";
 import styles from "./gallery.module.css";
 
 
@@ -75,7 +75,6 @@ export function SiteHeader() {
 export function StageOverlay() {
   const store = useGallery();
   const [roomsOpen, setRoomsOpen] = useState(false);
-  const [openWork, setOpenWork] = useState(null); // details pinned open by a tap (touch screens)
   const roomsRef = useRef(null);
   const fullscreen = useSyncExternalStore(noSubscribe, canFullscreen, () => false);
 
@@ -91,19 +90,6 @@ export function StageOverlay() {
       window.removeEventListener("keydown", close);
     };
   }, [roomsOpen]);
-
-  useEffect(() => {
-    if (!openWork) return undefined;
-    const close = (e) => {
-      if (e.type === "keydown" ? e.key === "Escape" : !e.target.closest?.(`.${styles.artSpot}`)) setOpenWork(null);
-    };
-    window.addEventListener("pointerdown", close);
-    window.addEventListener("keydown", close);
-    return () => {
-      window.removeEventListener("pointerdown", close);
-      window.removeEventListener("keydown", close);
-    };
-  }, [openWork]);
 
   const go = (p) => {
     setRoomsOpen(false);
@@ -122,34 +108,20 @@ export function StageOverlay() {
         <span className={styles.frameRight} />
       </div>
 
-      {WORKS.map((w, i) => (
-        <div key={w.id} className={styles.artSpot} data-open={openWork === w.id} ref={(el) => store.setWork(w.id, el)}>
-          <button
-            type="button"
-            className={styles.artEye}
-            aria-label={`About ${w.title} by ${w.artist}`}
-            aria-expanded={openWork === w.id}
-            onClick={() => setOpenWork((id) => (id === w.id ? null : w.id))}
-          >
-            <EyeIcon />
-          </button>
-          <div className={styles.artCard} role="tooltip">
-            <p className={styles.artCardNo}>
-              No. {String(i + 1).padStart(2, "0")}
-              <span>/ {String(WORKS.length).padStart(2, "0")}</span>
-            </p>
-            <p className={styles.artCardTitle}>{w.title}</p>
-            <p className={styles.artCardArtist}>{w.artist}</p>
-            <dl className={styles.artCardFacts}>
-              <dt>Year</dt>
-              <dd>{w.year}</dd>
-              <dt>Medium</dt>
-              <dd>{w.medium}</dd>
-              <dt>Size</dt>
-              <dd>{w.size}</dd>
-            </dl>
-          </div>
-        </div>
+      {/* each work's wall label: shows by itself as the camera arrives at the work
+          (Scene.jsx places it under the work, or beside it where there is no room) */}
+      {WORKS.map((w) => (
+        <aside key={w.id} className={styles.artLabel} ref={(el) => store.setWork(w.id, el)}>
+          <p className={styles.artLabelTitle}>{w.title}</p>
+          <p className={styles.artLabelArtist}>{w.artist}</p>
+          <p className={styles.artLabelMeta}>
+            {w.year}
+            <span aria-hidden="true">·</span>
+            {w.medium}
+            <span aria-hidden="true">·</span>
+            {w.size}
+          </p>
+        </aside>
       ))}
 
       <div className={styles.bottomLeft} ref={roomsRef}>
