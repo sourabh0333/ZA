@@ -32,12 +32,14 @@ export const PEOPLE = [
   {
     id: "stroller",
     pos: [-4.6, 0, -3.4],
-    look: [-0.3, -3.4],
+    look: [0.6, -3.4],
     env: "a",
     at: 0,
     first: true,
-    // (setting off from the console side: the sign is clear as the gallery opens)
-    walk: { to: [-0.3, -3.4], looks: [[-5.3, -5.75], [-0.8, -5.9]], pause: 1, start: 0.1 },
+    // (setting off from the console side, so the sign is clear as the gallery
+    // opens; she only ever passes in front of it, and waits at the desk in the
+    // gap between the receptionist and the guest, hiding neither)
+    walk: { to: [0.6, -3.4], looks: [[-5.3, -5.75], [0.7, -5.15]], pause: 1, start: 0.08 },
   },
   {
     // on the left-hand seat, sunk a little into its cushion (lower than 0.44 m)

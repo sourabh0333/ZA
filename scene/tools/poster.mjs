@@ -43,12 +43,14 @@ const evaluate = async (expression) => (await send("Runtime.evaluate", { express
 try {
   await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: 1, mobile: false });
   await send("Page.navigate", { url });
-  // wait for the 3D view to replace the old poster, then let it settle
+  // wait for the 3D view to replace the old poster (by then everything in view
+  // is prepared), then capture it as the gallery opens: the reception's visitors
+  // walk, so a few seconds later the frame would no longer be the first one
   const shown = () => evaluate(`document.querySelector('[data-hidden="true"] img') !== null`);
   for (let i = 0; i < 240 && !(await shown()); i++) await sleep(250);
   // (never save an error page or the old poster as the new one)
   if (!(await shown())) throw new Error(`the 3D view never appeared at ${url}: is the site running?`);
-  await sleep(2500);
+  await sleep(100);
   // just the view: no header, overlay, vignette, intro or poster (nor, in
   // development, Next's badge)
   await evaluate(`(() => {
