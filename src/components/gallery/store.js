@@ -11,6 +11,8 @@ export class GalleryStore {
   headerEl = null;
   cursorEl = null;
   scroller = null;
+  prep = 0; // how far the 3D view has got preparing itself, once downloaded (0..1)
+  prepListeners = new Set();
 
   setTarget(p) {
     this.target = p;
@@ -26,6 +28,18 @@ export class GalleryStore {
   snap() {
     this.smooth = this.target;
   }
+
+  setPrep(p) {
+    this.prep = p;
+    for (const fn of this.prepListeners) fn();
+  }
+
+  subscribePrep = (fn) => {
+    this.prepListeners.add(fn);
+    return () => this.prepListeners.delete(fn);
+  };
+
+  getPrep = () => this.prep;
 
   setZones(zones) {
     this.zones = zones;

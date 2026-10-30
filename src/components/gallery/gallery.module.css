@@ -26,9 +26,12 @@
   cursor: none;
 }
 
+/* above the canvas: the 3D view prepares underneath and shows only once the
+   poster fades */
 .posterWrap {
   position: absolute;
   inset: 0;
+  z-index: 1;
   transition: opacity 900ms ease;
 }
 
@@ -43,6 +46,7 @@
 .canvas {
   position: absolute !important;
   inset: 0;
+  z-index: 0;
 }
 
 /* The lens vignette (once a post-processing effect, now free): the same falloff,
@@ -50,6 +54,7 @@
 .vignette {
   position: absolute;
   inset: 0;
+  z-index: 2;
   pointer-events: none;
   background: radial-gradient(
     ellipse farthest-corner at 50% 50%,
@@ -62,27 +67,349 @@
   mix-blend-mode: multiply;
 }
 
-.loader {
-  position: absolute;
-  left: var(--frame-x);
-  right: var(--frame-x);
-  bottom: 0;
-  height: 1px;
-  background: rgb(255 255 255 / 0.12);
-  transition: opacity 600ms ease 300ms;
-  z-index: 3;
+/* ----------------------------------------------------------------- intro */
+
+/* The opening screen, over everything while the 3D view prepares. The dark is
+   seven bands (not the screen's own background), so it can leave as they
+   shrink away top first: for a moment what is left is a stepped ziggurat. */
+.intro {
+  --intro-ease: cubic-bezier(0.76, 0, 0.24, 1);
+  --intro-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --gold: linear-gradient(to right, #8a6a2f, #d8b46a 45%, #f1dca6 55%, #b8924a);
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  color: var(--paper);
 }
 
-.loader[data-hidden="true"] {
+.intro[data-leaving="true"] {
+  pointer-events: none;
+}
+
+.introBands {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+}
+
+.introBands span {
+  /* (a pixel over each neighbour: no hairline between bands) */
+  margin: -1px 0;
+  background: var(--ink);
+  transform-origin: 50% 50%;
+  transition: transform 750ms var(--intro-ease) calc(150ms + var(--i) * 60ms);
+}
+
+/* (each step's top edge catches a line of gold as the bands leave) */
+.intro[data-leaving="true"] .introBands span {
+  transform: scaleX(0);
+  box-shadow: inset 0 1px 0 rgb(216 180 106 / 0.6);
+}
+
+/* fine film grain: still, and the size of the screen (drifting, it cost the GPU
+   a second of the 3D view's preparation on integrated graphics) */
+.introGrain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+
+.introContent {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 22px calc(var(--frame-x) + 14px) clamp(26px, 5vh, 48px);
+  transition: opacity 350ms ease;
+}
+
+.intro[data-leaving="true"] .introGrain,
+.intro[data-leaving="true"] .introContent {
   opacity: 0;
 }
 
-.loaderBar {
+/* --- top: the logo, and what this is */
+.introTop {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 16px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgb(244 239 231 / 0.5);
+  animation: introFade 1000ms 150ms ease both;
+}
+
+.introLogo {
+  width: auto;
+  height: 40px;
+}
+
+.introTopRight {
+  justify-self: end;
+}
+
+/* --- centre: the ziggurat, then the name between two hairlines */
+.introCenter {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+}
+
+/* the emblem: five steps, each laid in gold, bottom first */
+.introZiggurat {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 4px;
+  width: clamp(110px, 11vw, 150px);
+  margin-bottom: clamp(28px, 5vh, 44px);
+}
+
+.introTier {
+  position: relative;
+  width: var(--w);
+  height: 7px;
+  border: 1px solid rgb(196 178 152 / 0.3);
+  overflow: hidden;
+  animation: introTierIn 700ms var(--intro-out) both;
+  animation-delay: calc(100ms + var(--i) * 90ms);
+}
+
+.introTier span {
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  animation: introTierFill 600ms var(--intro-ease) both;
+  animation-delay: calc(450ms + var(--i) * 110ms);
+}
+
+@keyframes introTierIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scaleX(0.6);
+  }
+}
+
+@keyframes introTierFill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* the lockup is as wide as the name; the hairlines span it */
+.introLockup {
+  display: grid;
+  justify-items: stretch;
+  gap: clamp(14px, 2.4vh, 22px);
+}
+
+.introRule {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 18px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--sand);
+}
+
+.introRule span {
+  /* (cancels the last letter's spacing, so the label sits centred) */
+  margin-right: -0.42em;
+  animation: introFade 800ms 800ms ease both;
+}
+
+/* each hairline draws outward from its label */
+.introRule::before,
+.introRule::after {
+  content: "";
+  height: 1px;
+  background: linear-gradient(to right, rgb(216 180 106 / 0), rgb(216 180 106 / 0.7));
+  transform-origin: right center;
+  animation: introDraw 1000ms var(--intro-ease) 250ms both;
+}
+
+.introRule::after {
+  background: linear-gradient(to left, rgb(216 180 106 / 0), rgb(216 180 106 / 0.7));
+  transform-origin: left center;
+}
+
+@keyframes introDraw {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.introName {
+  position: relative;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(32px, 7vw, 96px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.introNameLine {
+  display: flex;
+  letter-spacing: 0.2em;
+  /* (cancels the last letter's spacing, so the word sits centred) */
+  margin-right: -0.2em;
+}
+
+/* each letter rises out of a mask, the middle ones first: mid-way, the word's
+   own outline is a ziggurat */
+.introNameLine > span {
+  display: inline-block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+}
+
+.introNameLine > span > span {
+  display: inline-block;
+  /* (each on its own layer: rising, the text is moved, not repainted) */
+  will-change: transform;
+  animation: introRise 900ms var(--intro-out) both;
+  animation-delay: calc(350ms + var(--d) * 70ms);
+}
+
+@keyframes introRise {
+  from {
+    transform: translateY(105%);
+  }
+}
+
+/* underneath, the name in outline */
+.introName > .introNameLine > span > span {
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(216 180 106 / 0.5);
+}
+
+/* over it, the gold, seen through a window that rises from the bottom with
+   the progress: the window moves up while its contents move down by as much,
+   so the letters stay put and only transforms change */
+.introNameFill {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform: translateY(calc((1 - var(--p)) * 100%));
+  transition: transform 500ms var(--intro-out);
+}
+
+.introNameFill > .introNameLine {
+  transform: translateY(calc((var(--p) - 1) * 100%));
+  transition: transform 500ms var(--intro-out);
+}
+
+.introNameFill > .introNameLine > span > span {
+  /* a glint (parked off to the left) over the gold, which runs across the word */
+  background:
+    linear-gradient(100deg, transparent 38%, rgb(255 247 224 / 0.95) 50%, transparent 62%) no-repeat,
+    var(--gold);
+  background-size: 300% 100%, 1100% 100%;
+  background-position: 100% 0, calc(var(--i) * 10%) 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* full, and live: the glint crosses the name, letter by letter */
+.intro[data-ready="true"] .introNameFill > .introNameLine > span > span {
+  animation:
+    introRise 900ms var(--intro-out) calc(350ms + var(--d) * 70ms) both,
+    introGlint 500ms ease-in-out calc(var(--i) * 25ms) both;
+}
+
+@keyframes introGlint {
+  to {
+    background-position: 0% 0, calc(var(--i) * 10%) 0;
+  }
+}
+
+@keyframes introFade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* --- foot: what is happening, how far, and a hairline of it */
+.introFoot {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 14px 24px;
+  animation: introFade 1000ms 300ms ease both;
+}
+
+.introStage {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgb(244 239 231 / 0.6);
+}
+
+.introCount {
+  font-size: clamp(34px, 5vw, 60px);
+  font-weight: 300;
+  line-height: 0.78;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.introTrack {
+  grid-column: 1 / -1;
+  display: block;
+  height: 1px;
+  background: rgb(244 239 231 / 0.14);
+  overflow: hidden;
+}
+
+.introTrack span {
   display: block;
   height: 100%;
-  background: var(--paper);
+  background: var(--gold);
   transform-origin: left center;
-  transition: transform 300ms ease;
+  transition: transform 500ms ease;
+}
+
+@media (max-width: 640px) {
+  .introTopRight {
+    display: none;
+  }
+
+  .introNameLine {
+    letter-spacing: 0.12em;
+    margin-right: -0.12em;
+  }
+
+  .introRule {
+    gap: 12px;
+    letter-spacing: 0.3em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro * {
+    animation: none !important;
+  }
+
+  .introBands span {
+    transition: opacity 400ms ease;
+  }
+
+  .intro[data-leaving="true"] .introBands span {
+    transform: none;
+    opacity: 0;
+  }
 }
 
 /* ---------------------------------------------------------------- header */

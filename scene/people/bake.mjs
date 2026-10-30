@@ -2,8 +2,8 @@
 //   node scene/people/bake.mjs <rocketbox Assets dir> [id ...]
 // (only the visitors named, when any are; set CHROME to use an installed
 // Chrome instead of Playwright's own Chromium)
-// Run scene/people/textures.py first. Each avatar is loaded with its idle clip
-// in headless Chromium (bake.html, three.js FBXLoader + GLTFExporter), then
+// Run scene/people/textures.py first. Each avatar is loaded with its clips and
+// prop in headless Chromium (bake.html, three.js FBXLoader + GLTFExporter), then
 // compressed like the gallery model: meshopt geometry and animation, WebP textures.
 import http from "node:http";
 import { createRequire } from "node:module";
@@ -65,12 +65,18 @@ const base = `http://localhost:${server.address().port}`;
 const browser = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
 for (const p of people) {
   const page = await browser.newPage();
-  await page.goto(`${base}/bake.html?id=${p.id}&avatar=${p.avatar}&anim=${p.anim}`);
+  const query = new URLSearchParams({ id: p.id, avatar: p.avatar, group: p.group ?? "Adults", anims: [].concat(p.anim).join(",") });
+  if (p.prop) {
+    query.set("prop", p.prop.kind);
+    query.set("propClip", p.prop.clip ?? [].concat(p.anim)[0]);
+    query.set("propAt", p.prop.at ?? 0);
+  }
+  await page.goto(`${base}/bake.html?${query}`);
   await page.waitForFunction(() => window.done || window.failed, null, { timeout: 300000 });
   const failed = await page.evaluate(() => window.failed);
   if (failed) throw new Error(`${p.id}: ${failed}`);
   await page.close();
-  console.log(`baked ${p.id} (${p.avatar}, ${p.anim})`);
+  console.log(`baked ${p.id} (${p.avatar}, ${[].concat(p.anim).join(" + ")}${p.prop ? `, ${p.prop.kind}` : ""})`);
 }
 await browser.close();
 server.close();

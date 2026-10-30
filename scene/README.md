@@ -22,6 +22,8 @@ B="tools/blender-4.5.15-windows-x64/blender.exe"
 | 8. Poster still (with the site running) | `node scene/tools/poster.mjs http://localhost:3002/` | 30 s |
 
 Re-bake a single group after a small change: `-- --only vault,furniture_b`.
+With `--only` no reflection panorama is rendered unless `--envs` names it
+(`a` dark gallery, `b` frame B, `c` rooftop): `-- --only library --envs a`.
 Pass `-- --web` to `build_scene.py` to also write the website's `path.json`;
 without it the path goes to `scene/out/` so the live site keeps matching its
 baked model while rooms are being changed.
@@ -71,9 +73,23 @@ screens), so `src/components/gallery/Scene.jsx` keeps the GPU and main thread li
 - no post-processing pass: AgX tone mapping and the contrast grade run in each material's own
   shader, the vignette is a CSS overlay
 - reflection maps arrive prefiltered, so the browser never runs three.js's PMREM filter
-- while the poster is up: shaders compile in parallel, textures upload a few milliseconds per
-  frame, and one object per shader variant is drawn once (many drivers only finish a shader at
-  its first draw), so nothing compiles or uploads once the walk starts
+- every image is decoded off the main thread as it arrives (the lightmaps through
+  `ImageBitmapLoader`, like the model's own textures)
+- while the poster is up: shaders compile in parallel, and meanwhile the textures of what the
+  first view shows (inside a slightly wider lens, within 16 m) upload up to 40 ms per frame;
+  then one object per shader variant is drawn once (many drivers only finish a shader at its
+  first draw), so nothing compiles once the walk starts. Uploading every room's textures first
+  held the opening for 3 s on integrated graphics: the rest upload once the gallery is
+  showing, a few milliseconds per frame, nearest the first view first
+- meanwhile the opening screen (`Intro.jsx`) covers everything, with scrolling held: a stepped
+  ziggurat emblem builds itself, and the Zigguratss name, set in outline between two hairlines,
+  fills with gold from the bottom up with the progress (downloads its first half, this
+  preparation its second; the gold is a moving window, so filling it repaints nothing); a glint
+  crosses the full name, and once the view is live the screen leaves as bands that shrink
+  away top first, so the dark briefly stands as a ziggurat in the room. Its film grain is
+  still and screen-sized and it redraws only when the count changes: animated, or redrawn
+  every frame, it slowed the 3D preparation on integrated graphics. If the view never
+  comes, it lifts onto the poster after 30 s
 - rooms that walls and floors hide are not drawn (path.json `zones`, from `build_scene.py`)
 - canvas resolution starts at one pixel per CSS pixel and rises to the screen's density only
   while frames hold 60 fps; texture anisotropy is 2x
@@ -99,9 +115,14 @@ views are used exactly as designed.
 
 ## Visitors
 
-The people standing and sitting in the rooms are Microsoft Rocketbox avatars
-(MIT, see `public/gallery/people/LICENSE.txt`), each playing a motion-captured
-idle clip. They are not part of the Blender build: `scene/people/` turns them
+The people in the rooms are Microsoft Rocketbox avatars (MIT, see
+`public/gallery/people/LICENSE.txt`) playing motion-captured clips: a
+receptionist talking with a guest at the desk, a visitor strolling across the
+reception and one on the sofa, a woman photographing the textile wall on her
+phone, a couple discussing a painting, guests with glasses of wine, a man on a
+phone call, and a stroller on the rooftop terrace beyond the glass. (The
+library has no smoking clip, and smoking indoors would look wrong in a gallery
+anyway.) They are not part of the Blender build: `scene/people/` turns them
 into small glTF files with Node, Python (Pillow) and a headless browser
 (Playwright), no Blender needed.
 
@@ -109,8 +130,9 @@ into small glTF files with Node, Python (Pillow) and a headless browser
 # the cast's avatars and clips only (the full library is several GB)
 git clone --depth 1 --filter=blob:none --sparse https://github.com/microsoft/Microsoft-Rocketbox rocketbox
 git -C rocketbox sparse-checkout set --no-cone \
-  '/Assets/Avatars/Adults/<avatar>/Export/<avatar>.fbx' '/Assets/Avatars/Adults/<avatar>/Textures/*.tga' \
-  '/Assets/Animations/all_animations_max_motextr_static/<clip>.max.fbx'   # one pair per cast.json entry
+  '/Assets/Avatars/<group>/<avatar>/Export/<avatar>.fbx' '/Assets/Avatars/<group>/<avatar>/Textures/*.tga' \
+  '/Assets/Animations/all_animations_max_motextr_static/<clip>.max.fbx' \
+  '/Assets/Animations/all_animations_max_motextr_xy/<walk>.max.fbx'   # per cast.json entry
 python3 scene/people/textures.py rocketbox/Assets
 node scene/people/bake.mjs rocketbox/Assets
 ```
@@ -122,13 +144,24 @@ Playwright's own Chromium (then only the `playwright` package is needed).
 On Windows Git Bash, set `MSYS_NO_PATHCONV=1` before `sparse-checkout set`,
 or the leading-slash patterns are rewritten into Windows paths.
 
-`cast.json` says which avatar and clip each visitor is; `bake.mjs` writes
-`public/gallery/people/<id>.glb` (about 8k triangles and 600 KB each). Where
-they stand, what they look at and how they are lit is set on the website, in
-`src/components/gallery/visitors.js`: nobody stands between the camera and a
-work it stops at, and the phone framing keeps its camera clear of them. The
-visitors downstairs are prepared with the rooms, before the poster lifts; the
-rooftop's (`env: "c"`) are fetched only once the gallery is showing, since the
-walk reaches them last. They share the shaders of the ones below, so they cost
-no shader compile when they come into view.
+`cast.json` says which avatar (`group`: Adults, or Professions for the
+receptionist), clips and prop each visitor has; `bake.mjs` writes
+`public/gallery/people/<id>.glb` (about 8k triangles and 400 to 800 KB each,
+most of it the clips). Props (`props.js`) are built in three.js and fixed to
+the right hand, placed by where the hands are at a chosen moment of a clip: a
+wine glass in the curl of the fingers, a phone along them at the ear, a phone
+held landscape between both hands for a photo. Walks come from the "xy" clips,
+which travel: the bake takes the steady travel out (the figure walks on the
+spot) and keeps its speed on the avatar (`walkSpeed`), and the website moves
+the figure at exactly that speed, so the feet never slide.
+
+Where they are, what they look at, how their clips take turns (a glass held,
+then sipped) and where strollers walk is set on the website, in
+`src/components/gallery/visitors.js`: nobody stops between the camera and a
+work it stops at (the exhibition hall has no stroller for that reason: every
+way across it is some stop's view), and the phone framing keeps its camera
+clear of every spot they stand on or walk over. The reception's (`first`) are
+prepared with the rooms, before the poster lifts, and cost the opening about a
+second; the others are fetched once the gallery is showing, in list order (so
+keep it in walk order), and share their shaders.
 

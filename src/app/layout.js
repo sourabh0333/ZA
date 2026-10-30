@@ -1,4 +1,4 @@
-import { Jost } from "next/font/google";
+import { Cinzel, Jost } from "next/font/google";
 import "./globals.css";
 
 const jost = Jost({
@@ -6,10 +6,17 @@ const jost = Jost({
   subsets: ["latin"],
 });
 
+// the gallery's name, in Roman capitals like its logo's
+const cinzel = Cinzel({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["400"],
+});
+
 export const metadata = {
-  title: "ZA Gallery — Walk through the galleries",
+  title: "Zigguratss — Walk through the galleries",
   description:
-    "Step inside ZA Gallery: a material library, a textile wall, a vault of treasures and an exhibition hall, all in one continuous walk.",
+    "Step inside Zigguratss: a reception, a textile wall, a vault of treasures, an exhibition hall and a rooftop hall, all in one continuous walk.",
 };
 
 export const viewport = {
@@ -18,7 +25,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={jost.variable}>
+    <html lang="en" className={`${jost.variable} ${cinzel.variable}`}>
       <body>{children}</body>
     </html>
   );

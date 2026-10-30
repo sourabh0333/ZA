@@ -3,7 +3,7 @@
 Run: tools/blender-4.5.15-windows-x64/blender.exe -b --factory-startup -P scene/build_scene.py
 
 Blender coordinates: X east, Y north, Z up, metres. The walk starts facing north
-at the library, slides east past the curtains, then turns into "frame B", a
+at the reception, slides east past the curtains, then turns into "frame B", a
 second grid rotated 40 degrees clockwise that holds the black volume, the vault
 and the beige room.
 """
@@ -125,19 +125,25 @@ mk("emit_lens", None, color=(1, 1, 1), rough=0.3,
    emission=(1.0, 0.8, 0.58), emission_strength=40.0, web={"env": 0.0, "emissive": True})
 mk("emit_strip", None, color=(1, 1, 1), rough=0.3,
    emission=(1.0, 0.86, 0.7), emission_strength=14.0, web={"env": 0.0, "emissive": True})
-mk("emit_shelf", None, color=(1, 1, 1), rough=0.3,
-   emission=(1.0, 0.8, 0.6), emission_strength=3.0, web={"env": 0.0, "emissive": True})
-
-# sample tiles on the shelves: mostly pale stone, oak and beige, a few darker
-SWATCHES = [M[n] for n in ("oak", "oak", "oak", "stone_light", "stone_light", "stone_light", "plaster_beige",
-                           "plaster_beige", "walnut", "walnut", "terrazzo", "smoked")]
+# the reception desk: pale honed limestone, a soft cloud in it
+mk("limestone", T.write_set("limestone", T.tinted_albedo("clay_plaster", (1.0, 0.95, 0.86), contrast=0.35, sat=0.1, target=0.55),
+                            T.roughness("clay_plaster", 0.55, 0.05), T.normal("clay_plaster")),
+   normal_strength=0.1, web={"env": 0.35})
+# the brand lettering: satin brass, partly diffuse, so the baked light shows it
+# gold on the website too (fully metallic, it shows only reflections, and the
+# panel faces the dark room)
+mk("brass_satin", None, color=(0.78, 0.54, 0.25), rough=0.35, metal=0.35, web={"env": 0.8})
+# the hidden LED behind the brand panel: lights the fluting round it, never seen itself
+mk("emit_halo", None, color=(1, 1, 1), rough=0.3,
+   emission=(1.0, 0.78, 0.55), emission_strength=400.0, web={"env": 0.0, "emissive": True})
 
 # ============================================================ room A shell
 print("[build] room A")
+# (the reception's bake group keeps the name of the library it replaced)
 G_FLOOR_A, G_WALL_A, G_LIB, G_FURN_A = "floor_a", "walls_a", "library", "furniture_a"
 
 box("FloorA", G_FLOOR_A, M["floor_a"], (24.0, 13.6, 0.1), (5.0, 2.0, -0.1), tile=2.5)
-box("Rug", G_FLOOR_A, M["rug"], (7.8, 3.0, 0.012), (1.6, 3.95, 0.0), tile=1.2)
+box("Rug", G_FLOOR_A, M["rug"], (3.0, 2.5, 0.012), (3.2, 4.35, 0.0), tile=1.2)
 
 box("CeilingA", G_WALL_A, M["ceiling_dark"], (24.0, 13.6, 0.1), (5.0, 2.0, H_A), tile=2.0)
 wall_quad("WallNorthA", G_WALL_A, M["plaster_dark"], (14.0, 6.0), (-7.0, 6.0), 0, H_A)
@@ -168,7 +174,7 @@ wall_quad("RoomFrontL", G_ROOM, M["plaster_dark"], (RX0, RY0), (DOOR_X0, RY0), 0
 wall_quad("RoomFrontR", G_ROOM, M["plaster_dark"], (DOOR_X1, RY0), (RX1, RY0), 0, H_A)
 wall_quad("RoomLintel", G_ROOM, M["plaster_dark"], (DOOR_X0, RY0), (DOOR_X1, RY0), DOOR_H, H_A)
 
-# pillar between library and curtains (a dark rounded column), and the plaster
+# pillar between reception and curtains (a dark rounded column), and the plaster
 # pier after them
 import bmesh  # noqa: E402
 pillar = box("Pillar", G_WALL_A, M["charcoal"], (1.0, 0.6, H_A), (5.0, 5.7, 0.0), tile=2.0)
@@ -184,104 +190,147 @@ from lib.geo import box_uv  # noqa: E402
 box_uv(pillar.data, 2.0)
 box("PierEast", G_WALL_A, M["plaster_dark"], (1.8, 0.35, H_A), (13.1, 5.82, 0.0), tile=2.0)
 
-# =================================================================== library
-print("[build] library")
-SHELF_Z = [0.5, 1.01, 1.52, 2.03, 2.54, 3.05]
-DEPTH = 0.42
-Y_BACK = 6.0
-Y_FRONT = Y_BACK - DEPTH
-T_BOARD = 0.03
+# ================================================================= reception
+# The visitor's first view: a brand wall of fluted walnut across the back, a
+# dark panel at its centre with the gallery's name in brass, glowing at its edges
+# from a hidden LED; before it a sculpted pale-stone desk under three opal
+# pendants; a small lounge to the right, a console with vessels to the left.
+print("[build] reception")
+WALL_Y = 6.0
+FLUTE_X0, FLUTE_X1 = -4.6, 3.0
+FLUTE_FRONT = WALL_Y - 0.08
+DESK_X, DESK_Y = -0.8, 4.35
 
 
-def shelving(name, x0, x1, bays, niche=None):
-    xs = [x0 + (x1 - x0) * i / bays for i in range(bays + 1)]
-    cy = Y_BACK - DEPTH / 2
-    box(f"{name}_plinth", G_LIB, M["smoked"], (x1 - x0, DEPTH, SHELF_Z[0]), ((x0 + x1) / 2, cy, 0.0), tile=1.5)
-    for i, x in enumerate(xs):
-        box(f"{name}_v{i}", G_LIB, M["smoked"], (T_BOARD, DEPTH, SHELF_Z[-1] - SHELF_Z[0]), (x, cy, SHELF_Z[0]), tile=1.5)
-    for j, z in enumerate(SHELF_Z):
-        box(f"{name}_h{j}", G_LIB, M["smoked"], (x1 - x0, DEPTH, T_BOARD), ((x0 + x1) / 2, cy, z - T_BOARD), tile=1.5)
-    for i in range(bays):
-        for j in range(len(SHELF_Z) - 1):
-            bx0, bx1 = xs[i] + T_BOARD, xs[i + 1] - T_BOARD
-            z = SHELF_Z[j]
-            if niche and i in niche[0] and j in niche[1]:
-                box(f"{name}_n{i}{j}", G_LIB, M["black_matte"], (bx1 - bx0 + 0.04, 0.02, SHELF_Z[j + 1] - z),
-                    ((bx0 + bx1) / 2, Y_BACK - 0.03, z), tile=1.0)
-                continue
-            # LED strip under the board above, toward the front edge
-            box(f"{name}_led{i}{j}", G_LIB, M["emit_shelf"], (bx1 - bx0 - 0.02, 0.015, 0.006),
-                ((bx0 + bx1) / 2, Y_FRONT + 0.04, SHELF_Z[j + 1] - T_BOARD - 0.006), tile=1.0)
-            # square sample tiles facing out, each leaning sideways on the one
-            # before like fallen dominoes: from the front the row reads as a
-            # saw-tooth of lit faces and shadowed edges
-            x = bx0 + 0.04
-            while x < bx1 - 0.3:
-                w = random.uniform(0.22, 0.26)
-                h = random.uniform(0.24, 0.28)
-                m = random.choice(SWATCHES)
-                lean = random.uniform(32, 42)
-                ob = box(f"{name}_c{i}{j}_{x:.2f}", G_LIB, m, (w, 0.016, h), (0, 0, 0), tile=0.6)
-                # pivot on the bottom-right corner, lean to the right
-                ob.data.transform(Matrix.Translation((x + w, Y_BACK - 0.2 + random.uniform(-0.03, 0.03), z))
-                                  @ rot_z(random.uniform(-10, 10))
-                                  @ Matrix.Rotation(math.radians(lean), 4, "Y")
-                                  @ Matrix.Translation((-w / 2, 0, 0)))
-                ob.data.update()
-                x += random.uniform(0.1, 0.12)
+def font(*names):
+    """A system font if the build machine has one, else Blender's own."""
+    for n in names:
+        path = os.path.join(os.environ.get("WINDIR", "C:/Windows"), "Fonts", n)
+        if os.path.exists(path):
+            return bpy.data.fonts.load(path)
+    return None
 
 
-shelving("ShelfL", -6.0, -2.6, 4)
-shelving("ShelfC", -1.0, 3.3, 5, niche=({1, 2, 3}, {2, 3}))
-shelving("ShelfR", 3.3, 4.5, 2)
+def lettering(name, grp, mat, body, size, matrix, face=None, spacing=1.0, depth=0.01):
+    """Extruded text in the XZ plane (reading along +X, facing -Y), centred on `matrix`."""
+    cu = bpy.data.curves.new(name, "FONT")
+    cu.body = body
+    cu.size = size
+    cu.extrude = depth
+    cu.align_x = "CENTER"
+    cu.align_y = "CENTER"
+    cu.space_character = spacing
+    if face:
+        cu.font = face
+    tmp = bpy.data.objects.new(name, cu)
+    scene.collection.objects.link(tmp)
+    me = bpy.data.meshes.new_from_object(tmp.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(tmp)
+    me.transform(matrix @ Matrix.Rotation(math.radians(90), 4, "X"))
+    me.materials.clear()
+    me.materials.append(mat)
+    box_uv(me, 0.5)
+    ob = bpy.data.objects.new(name, me)
+    scene.collection.objects.link(ob)
+    return link(ob, grp)
 
-# central display panel: dark charcoal board with material swatches and a
-# "WOODWORK" label, laid out as in the reference (centres x, z; sizes w, h)
-box("Panel", G_LIB, M["plaster_dark"], (1.6, 0.12, 2.55), (-1.8, 5.94, 0.5), tile=1.5)
-box("PanelPlinth", G_LIB, M["plaster_dark"], (1.6, DEPTH, 0.5), (-1.8, Y_BACK - DEPTH / 2, 0.0), tile=1.5)
-for nm, m, (w, h), (x, z) in [
-    ("SwTan", "oak", (0.25, 0.23), (-2.385, 2.6)),
-    ("SwCopper", "sienna", (0.38, 0.85), (-1.93, 2.33)),
-    ("SwBeigeTop", "plaster_beige", (0.41, 0.44), (-1.27, 2.54)),
-    ("SwOakMid", "oak", (0.25, 0.27), (-2.385, 2.04)),
-    ("SwBeigeMid", "plaster_beige", (0.44, 0.43), (-1.29, 1.79)),
-    ("SwTerrazzo", "terrazzo_dark", (0.83, 0.86), (-2.16, 1.21)),
-    ("SwBeigeLow", "plaster_beige", (0.44, 0.46), (-1.29, 1.02)),
-]:
-    box(nm, G_LIB, M[m], (w, 0.025, h), (x, 5.865, z - h / 2), tile=0.8)
-label = bpy.data.curves.new("PanelLabel", "FONT")
-label.body = "WOODWORK"
-label.size = 0.09
-label.extrude = 0.002
-label.align_x = "CENTER"
-text_ob = bpy.data.objects.new("PanelLabelText", label)
-scene.collection.objects.link(text_ob)
-label_me = bpy.data.meshes.new_from_object(text_ob.evaluated_get(bpy.context.evaluated_depsgraph_get()))
-bpy.data.objects.remove(text_ob)
-label_me.transform(Matrix.Translation((-1.8, 5.876, 2.95)) @ Matrix.Rotation(math.radians(90), 4, "X"))
-label_me.materials.clear()
-label_me.materials.append(M["stone_light"])
-box_uv(label_me, 0.5)
-label_ob = bpy.data.objects.new("PanelLabel", label_me)
-scene.collection.objects.link(label_ob)
-link(label_ob, G_LIB)
 
-# ================================================================ furniture A
-print("[build] furniture A")
-box("TableTop", G_FURN_A, M["oak"], (5.0, 1.0, 0.07), (1.4, 4.45, 0.71), tile=1.8, bevel=0.006)
-for i, x in enumerate((-0.55, 3.35)):
-    box(f"TableLeg{i}", G_FURN_A, M["steel_dark"], (0.08, 0.78, 0.71), (x, 4.45, 0.0), tile=1.0)
-box("TableCab", G_FURN_A, M["smoked"], (1.7, 0.6, 0.62), (2.75, 4.45, 0.0), tile=1.2)
+def rounded(name, grp, mat, size, center, radius, tile=1.0, segments=12):
+    """A box with its vertical edges rounded (a radius of half the depth makes pill ends)."""
+    ob = box(name, grp, mat, size, center, tile=tile)
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bmesh.ops.bevel(bm, geom=[e for e in bm.edges if abs(e.verts[0].co.z - e.verts[1].co.z) > 1e-4],
+                    offset=radius, segments=segments, affect="EDGES", profile=0.5)
+    for f in bm.faces:
+        f.smooth = abs(f.normal.z) < 0.5
+    bm.to_mesh(ob.data)
+    bm.free()
+    box_uv(ob.data, tile)
+    return ob
 
-# pendant cylinder spots in front of the shelving
-PENDANTS = [(-0.25, 5.05, 2.22, 25), (1.05, 5.0, 2.3, -18), (2.35, 5.08, 2.2, 30), (3.65, 5.05, 2.32, -10)]
-for i, (x, y, z, tilt) in enumerate(PENDANTS):
-    rod = cylinder(f"PendantRod{i}", G_FURN_A, M["black_matte"], 0.006, H_A - z - 0.12,
-                   Matrix.Translation((x, y, z + 0.12)), segments=8)
-    m = (Matrix.Translation((x, y, z + 0.1)) @ Matrix.Rotation(math.radians(tilt), 4, "X")
-         @ Matrix.Rotation(math.radians(160), 4, "X") @ Matrix.Rotation(math.radians(tilt * 0.6), 4, "Y"))
-    cylinder(f"Pendant{i}", G_FURN_A, M["brass"], 0.13, 0.38, m, segments=40)
-    disk(f"PendantLens{i}", G_FURN_A, M["emit_lens"], 0.1, m @ Matrix.Translation((0, 0, 0.381)), seg=32)
+
+# the fluting: slim walnut battens on a black backing, floor to ceiling
+box("FluteBack", G_LIB, M["black_wood"], (FLUTE_X1 - FLUTE_X0, 0.045, H_A), ((FLUTE_X0 + FLUTE_X1) / 2, WALL_Y - 0.0225, 0.0),
+    tile=1.5)
+bm = bmesh.new()
+PITCH, BATTEN = 0.095, 0.06
+x = FLUTE_X0 + PITCH / 2
+while x < FLUTE_X1:
+    r = bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.transform(bm, matrix=Matrix.Translation((x, FLUTE_FRONT + 0.0175, H_A / 2)) @ Matrix.Diagonal((BATTEN, 0.035, H_A, 1)),
+                        verts=r["verts"])
+    x += PITCH
+bmesh.ops.bevel(bm, geom=[e for e in bm.edges if abs(e.verts[0].co.z - e.verts[1].co.z) > 1.0],
+                offset=0.008, segments=2, affect="EDGES", profile=0.5)
+finish(bm, "Flutes", G_LIB, [M["walnut"]], 1.2)
+# a dark shadow-gap skirting under the battens, so the wall seems to float
+box("FluteShadow", G_LIB, M["black_matte"], (FLUTE_X1 - FLUTE_X0, 0.09, 0.06), ((FLUTE_X0 + FLUTE_X1) / 2, WALL_Y - 0.05, 0.0),
+    tile=1.0)
+
+# the brand panel, standing off the fluting with an LED hidden round its back
+PANEL_W, PANEL_H, PANEL_Z = 2.7, 1.2, 1.28
+panel_front = FLUTE_FRONT - 0.07
+box("BrandPanel", G_LIB, M["charcoal"], (PANEL_W, 0.04, PANEL_H), (DESK_X, panel_front + 0.02, PANEL_Z), tile=1.5, bevel=0.006)
+for i, (dx, dz, w, h) in enumerate(((0, 0.03, PANEL_W - 0.08, 0.012), (0, PANEL_H - 0.042, PANEL_W - 0.08, 0.012),
+                                    (-(PANEL_W / 2 - 0.04), 0.03, 0.012, PANEL_H - 0.06), (PANEL_W / 2 - 0.04, 0.03, 0.012, PANEL_H - 0.06))):
+    box(f"BrandHalo{i}", G_LIB, M["emit_halo"], (w, 0.008, h), (DESK_X + dx, panel_front + 0.045, PANEL_Z + dz), tile=1.0)
+box("BrandStandoff", G_LIB, M["black_matte"], (PANEL_W - 0.4, 0.03, PANEL_H - 0.4), (DESK_X, panel_front + 0.055, PANEL_Z + 0.2),
+    tile=1.0)
+# the gallery's mark (a Z in a square frame, after its logo) over its name in a
+# serif, as on the logo; static fonts only: a variable font's strokes overlap,
+# and the overlaps fill as holes
+face_serif = font("georgia.ttf", "times.ttf")
+face_sans = font("segoeui.ttf", "arial.ttf")
+MARK, MARK_Z, BAR = 0.42, PANEL_Z + 0.86, 0.02
+for k, (dx, dz, w, h) in enumerate(((0, MARK / 2 - BAR, MARK, BAR), (0, -MARK / 2, MARK, BAR),
+                                    (-(MARK - BAR) / 2, -MARK / 2, BAR, MARK), ((MARK - BAR) / 2, -MARK / 2, BAR, MARK))):
+    box(f"BrandFrame{k}", G_LIB, M["brass_satin"], (w, 0.012, h), (DESK_X + dx, panel_front - 0.006, MARK_Z + dz), tile=1.0)
+lettering("BrandZ", G_LIB, M["brass_satin"], "Z", 0.4, Matrix.Translation((DESK_X, panel_front - 0.004, MARK_Z)), face_serif,
+          depth=0.012)
+lettering("BrandName", G_LIB, M["brass_satin"], "ZIGGURATSS", 0.2, Matrix.Translation((DESK_X, panel_front - 0.004, PANEL_Z + 0.47)),
+          face_serif, spacing=1.25, depth=0.01)
+box("BrandRule", G_LIB, M["brass_satin"], (1.1, 0.012, 0.006), (DESK_X, panel_front - 0.004, PANEL_Z + 0.33), tile=1.0)
+lettering("BrandSub", G_LIB, M["brass_satin"], "A R T   G A L L E R Y", 0.085, Matrix.Translation((DESK_X, panel_front - 0.004, PANEL_Z + 0.2)),
+          face_sans, spacing=1.4, depth=0.005)
+
+# the desk: a pill-shaped block of pale stone on a recessed black plinth,
+# a thin black top, and a brass band round it a hand's width below the top
+DESK_L, DESK_D, DESK_H = 3.6, 0.8, 1.06
+rounded("DeskPlinth", G_FURN_A, M["black_matte"], (DESK_L - 0.12, DESK_D - 0.12, 0.08), (DESK_X, DESK_Y, 0.0), (DESK_D - 0.12) / 2 - 0.001)
+rounded("DeskBody", G_FURN_A, M["limestone"], (DESK_L, DESK_D, DESK_H - 0.11), (DESK_X, DESK_Y, 0.08), DESK_D / 2 - 0.001, tile=1.4)
+rounded("DeskBand", G_FURN_A, M["brass"], (DESK_L + 0.012, DESK_D + 0.012, 0.025), (DESK_X, DESK_Y, DESK_H - 0.17),
+        (DESK_D + 0.012) / 2 - 0.001)
+rounded("DeskTop", G_FURN_A, M["steel_black"], (DESK_L + 0.05, DESK_D + 0.05, 0.03), (DESK_X, DESK_Y, DESK_H - 0.03),
+        (DESK_D + 0.05) / 2 - 0.001)
+# a warm glow on the floor from under the desk's front
+box("DeskKick", G_FURN_A, M["emit_strip"], (DESK_L - 0.9, 0.012, 0.01), (DESK_X, DESK_Y - DESK_D / 2 + 0.07, 0.035), tile=1.0)
+
+# opal disc pendants over the desk, on brass rings
+PENDANTS = [(DESK_X - 1.2, DESK_Y, 2.8), (DESK_X, DESK_Y, 2.86), (DESK_X + 1.2, DESK_Y, 2.8)]
+for i, (x, y, z) in enumerate(PENDANTS):
+    cylinder(f"PendantRod{i}", G_FURN_A, M["black_matte"], 0.005, H_A - z - 0.05, Matrix.Translation((x, y, z + 0.05)), segments=8)
+    cylinder(f"PendantRing{i}", G_FURN_A, M["brass"], 0.265, 0.018, Matrix.Translation((x, y, z + 0.035)), segments=48)
+    cylinder(f"Pendant{i}", G_FURN_A, M["lamp_shade"], 0.25, 0.04, Matrix.Translation((x, y, z)), segments=48)
+
+# the lounge: an olive velvet sofa against the fluting, a green marble drum table
+SOFA_X, SOFA_Y, SOFA_L = 3.3, 5.35, 2.1
+for k, x in enumerate((SOFA_X - SOFA_L / 2 + 0.12, SOFA_X + SOFA_L / 2 - 0.12)):
+    for j, y in enumerate((SOFA_Y - 0.3, SOFA_Y + 0.3)):
+        box(f"SofaLeg{k}{j}", G_FURN_A, M["brass"], (0.03, 0.03, 0.1), (x, y, 0.0), tile=1.0)
+box("SofaBase", G_FURN_A, M["olive"], (SOFA_L, 0.86, 0.2), (SOFA_X, SOFA_Y, 0.1), tile=0.8, bevel=0.03)
+for k in range(2):
+    box(f"SofaSeat{k}", G_FURN_A, M["olive"], (SOFA_L / 2 - 0.2, 0.66, 0.13), (SOFA_X + (k - 0.5) * (SOFA_L / 2 - 0.18), SOFA_Y - 0.06, 0.3),
+        tile=0.8, bevel=0.045)
+box("SofaBack", G_FURN_A, M["olive"], (SOFA_L, 0.22, 0.48), (SOFA_X, SOFA_Y + 0.32, 0.3), tile=0.8, bevel=0.06)
+for k, x in enumerate((SOFA_X - SOFA_L / 2 + 0.09, SOFA_X + SOFA_L / 2 - 0.09)):
+    box(f"SofaArm{k}", G_FURN_A, M["olive"], (0.18, 0.86, 0.32), (x, SOFA_Y, 0.3), tile=0.8, bevel=0.06)
+cylinder("LoungeTable", G_FURN_A, M["marble_green"], 0.45, 0.36, Matrix.Translation((SOFA_X, 4.15, 0.0)), segments=64)
+cylinder("LoungeTableTop", G_FURN_A, M["steel_black"], 0.455, 0.012, Matrix.Translation((SOFA_X, 4.15, 0.36)), segments=64)
+
+# the console on the left: a long low walnut cabinet carrying two vessels
+box("Console", G_FURN_A, M["smoked"], (2.0, 0.42, 0.62), (-5.75, WALL_Y - 0.25, 0.12), tile=1.2, bevel=0.008)
+box("ConsoleBase", G_FURN_A, M["black_matte"], (1.9, 0.34, 0.12), (-5.75, WALL_Y - 0.25, 0.0), tile=1.0)
 
 # marble bench before the curtains: a split-face green marble block, its
 # sides chiselled and uneven, its top flat and polished
@@ -904,46 +953,10 @@ def model(name):
 print("[build] models")
 
 
-def shell_arc(name, grp, mat, radius, thick, z0, z1, arc_deg, matrix, seg=24):
-    """Curved chair back: a band of a cylinder wall, open toward local -Y."""
-    bm = bmesh.new()
-    rows = []
-    for i in range(seg + 1):
-        a = math.radians(-90 - arc_deg / 2 + arc_deg * i / seg)
-        ring = []
-        for r in (radius, radius + thick):
-            for z in (z0, z1):
-                ring.append(bm.verts.new((r * math.cos(a), r * math.sin(a) * -1.0, z)))
-        rows.append(ring)
-    for i in range(seg):
-        a, b = rows[i], rows[i + 1]
-        faces = [(a[0], b[0], b[1], a[1]), (a[3], b[3], b[2], a[2]), (a[1], b[1], b[3], a[3]), (a[2], b[2], b[0], a[0])]
-        for f in faces:
-            bm.faces.new(f).smooth = True
-    bm.faces.new((rows[0][0], rows[0][1], rows[0][3], rows[0][2]))
-    bm.faces.new((rows[-1][2], rows[-1][3], rows[-1][1], rows[-1][0]))
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    bmesh.ops.transform(bm, matrix=matrix, verts=bm.verts)
-    return finish(bm, name, grp, [mat], 0.5)
-
-
-def dining_chair(i, x, y, yaw):
-    """Modern dining chair: olive upholstered seat, curved back, slim black legs."""
-    m = Matrix.Translation((x, y, 0.0)) @ rot_z(yaw)
-    seat = box(f"Chair{i}Seat", G_FURN_A, M["olive"], (0.46, 0.44, 0.07), (0, 0, 0.44), tile=0.6, bevel=0.018)
-    seat.data.transform(m)
-    for k, (lx, ly) in enumerate(((-0.19, -0.17), (0.19, -0.17), (-0.19, 0.17), (0.19, 0.17))):
-        splay = Matrix.Rotation(math.radians(5 * (1 if ly > 0 else -1)), 4, "X") @ Matrix.Rotation(math.radians(-5 * (1 if lx > 0 else -1)), 4, "Y")
-        cylinder(f"Chair{i}Leg{k}", G_FURN_A, M["black_matte"], 0.013, 0.45,
-                 m @ Matrix.Translation((lx, ly, 0.0)) @ splay, segments=10)
-    shell_arc(f"Chair{i}Back", G_FURN_A, M["olive"], 0.24, 0.035, 0.6, 0.86, 150,
-              m @ Matrix.Translation((0, 0.04, 0.0)))
-
-
-# chairs face north toward the table; the curved back sits on the camera side
-CHAIR_RNG = random.Random(13)
-for i, x in enumerate((-0.3, 0.95, 2.2)):
-    dining_chair(i, x, 3.6, 180 + CHAIR_RNG.uniform(-6, 6))
+# the vessels on the console and the desk
+place_model(model("ceramic_vase_02"), "VaseConsole", G_FURN_A, Matrix.Translation((-6.2, WALL_Y - 0.25, 0.74)) @ Matrix.Diagonal((2.2, 2.2, 2.2, 1)))
+place_model(model("brass_vase_01"), "VaseConsole2", G_FURN_A, Matrix.Translation((-5.3, WALL_Y - 0.25, 0.74)))
+place_model(model("ceramic_vase_02"), "VaseDesk", G_FURN_A, Matrix.Translation((DESK_X + 1.25, DESK_Y + 0.05, DESK_H)) @ rot_z(40))
 place_model(model("ArmChair_01"), "ArmChair", G_FURN_A, Matrix.Translation((-3.05, 2.55, 0.0)) @ rot_z(-125))
 
 # armchair upholstery -> deep red (same texture detail, new colour)
@@ -973,13 +986,17 @@ for mat in bpy.data.materials:
 print("[build] lights")
 K = 3000
 KB = 3300
-# library: grazing downlights over the shelving
+# reception: grazing downlights along the fluting
 for i, x in enumerate([-5.2, -3.6, -1.8, -0.1, 1.5, 3.1, 4.3]):
     spot(f"LibWash{i}", (x, 5.25, H_A - 0.02), (x, 5.95, 1.2), 240, 55, 0.7, K, 0.04)
     disk(f"LibCan{i}", G_WALL_A, M["emit_lens"], 0.04, Matrix.Translation((x, 5.25, H_A - 0.001)) @ Matrix.Rotation(math.pi, 4, "X"), 16)
-# the pendant spots light the table
-for i, (x, y, z, tilt) in enumerate(PENDANTS):
-    spot(f"PendantSpot{i}", (x, y - 0.12, z - 0.05), (x + 0.1, 4.2, 0.7), 110, 45, 0.6, K, 0.04)
+# the pendants light the desk top; spots light the lounge and the console
+for i, (x, y, z) in enumerate(PENDANTS):
+    spot(f"PendantSpot{i}", (x, y, z - 0.02), (x, y - 0.1, DESK_H), 120, 70, 0.8, K, 0.1)
+# a narrow spot from over the desk lights the sign's lettering face on
+spot("SignSpot", (DESK_X, 4.2, H_A - 0.02), (DESK_X, panel_front, PANEL_Z + 0.6), 160, 40, 0.6, K, 0.03)
+spot("LoungeSpot", (SOFA_X, 4.2, H_A - 0.02), (SOFA_X, 4.6, 0.3), 160, 60, 0.8, K, 0.04)
+spot("ConsoleSpot", (-5.75, 4.9, H_A - 0.02), (-5.75, WALL_Y - 0.25, 0.8), 110, 50, 0.8, K, 0.03)
 # soft fill over the room
 area("FillA", (0.0, 1.5, H_A - 0.05), (0.0, 1.5, 0.0), 260, 6.0, 4.0, 3000)
 area("FillA2", (8.5, 2.0, H_A - 0.05), (8.5, 2.0, 0.0), 200, 5.0, 4.0, 3000)
@@ -1157,7 +1174,7 @@ TIME_OF = dict(zip(("library", "curtain", "room", "vault", "beige", "roof"),
                    (0.0, times[WORK_TIME["curtain"]], times[WORK_TIME["centre"]], times[WORK_TIME["vault_c"]],
                     times[WORK_TIME["beige_field"]] - 0.07, times[WORK_TIME["hall_n3"] - 1])))
 hotspots = [
-    {"id": "materials", "label": "Material library", "pos": (-2.12, 5.84, 1.08), "range": [P(0.0), P(0.18)]},
+    {"id": "reception", "label": "Reception", "pos": (DESK_X + 0.9, panel_front, PANEL_Z + 1.1), "range": [P(0.0), P(0.18)]},
     {"id": "lamp", "label": "Lighting", "pos": tuple(B(LAMP[0], LAMP[1] - 0.1, LAMP[2] + 0.36)),
      "range": [P(times[WORK_TIME["beige_field"] - 1] - 0.02), P(times[WORK_TIME["beige_field"] - 1] + 0.03)]},
 ]
@@ -1177,7 +1194,7 @@ def credit(wid):
 
 
 # the Rooms menu's stops, and where the rooms turn light (the nav tab appears)
-rooms = [("Material library", TIME_OF["library"]), ("Textile wall", TIME_OF["curtain"]),
+rooms = [("Reception", TIME_OF["library"]), ("Textile wall", TIME_OF["curtain"]),
          ("Gallery room", TIME_OF["room"]), ("The vault", TIME_OF["vault"]), ("Exhibition hall", TIME_OF["beige"]),
          ("Rooftop hall", TIME_OF["roof"])]
 BRIGHT_FROM = times[WORK_TIME["vol_r"] + 1] - 0.02

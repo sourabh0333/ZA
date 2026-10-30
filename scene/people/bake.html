@@ -1,7 +1,8 @@
 <!doctype html>
 <!-- Loaded by bake.mjs in a headless browser: one Rocketbox avatar plus its
-     idle clip in, one glTF binary posted back to /out/<id>.glb. ?preview=<seconds>
-     renders the pose at that moment instead. -->
+     clips (and a hand-held prop, props.js) in, one glTF binary posted back to
+     /out/<id>.glb. ?preview=<seconds> renders the first clip's pose at that
+     moment instead. -->
 <html>
   <body style="margin: 0">
     <script type="importmap">
@@ -11,10 +12,12 @@
       import * as THREE from "three";
       import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
       import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+      import { attachProp } from "/props.js";
 
       const q = new URLSearchParams(location.search);
       const avatar = q.get("avatar");
-      const anim = q.get("anim");
+      const group = q.get("group") || "Adults";
+      const anims = q.get("anims").split(",");
 
       try {
         // the FBX files point at textures by Max paths that don't exist: skip them
@@ -22,7 +25,7 @@
         manager.setURLModifier((u) => (/\.(tga|png|jpe?g)$/i.test(u) ? "data:," : u));
         const fbx = new FBXLoader(manager);
 
-        const person = await fbx.loadAsync(`/rb/Avatars/Adults/${avatar}/Export/${avatar}.fbx`);
+        const person = await fbx.loadAsync(`/rb/Avatars/${group}/${avatar}/Export/${avatar}.fbx`);
         person.name = avatar;
         person.scale.setScalar(0.01); // centimetres -> metres
 
@@ -64,10 +67,39 @@
           o.material = ms.length === 1 ? ms[0] : ms;
         });
 
-        const clip = (await fbx.loadAsync(`/rb/Animations/all_animations_max_motextr_static/${anim}.max.fbx`)).animations[0];
-        // rotations make the pose; only the hips move through space; scales never change
-        clip.tracks = clip.tracks.filter((t) => t.name.endsWith(".quaternion") || t.name === "Bip01.position");
-        clip.name = anim;
+        const clips = [];
+        let walkSpeed = 0;
+        for (const anim of anims) {
+          // (walks only come with their travel kept, from the "xy" set)
+          const walk = anim.includes("_walk_");
+          const set = walk ? "xy" : "static";
+          const clip = (await fbx.loadAsync(`/rb/Animations/all_animations_max_motextr_${set}/${anim}.max.fbx`)).animations[0];
+          // rotations make the pose; only the hips move through space; scales never change
+          clip.tracks = clip.tracks.filter((t) => t.name.endsWith(".quaternion") || t.name === "Bip01.position");
+          clip.name = anim;
+          if (walk) {
+            // walked on the spot: the hips' steady travel forward (z, in cm) comes
+            // out, its unevenness within the stride stays; the website moves the
+            // figure along at the speed the clip walked, kept on the avatar
+            const hips = clip.tracks.find((t) => t.name === "Bip01.position");
+            const v = hips.values;
+            const n = hips.times.length;
+            const z0 = v[2];
+            const travel = v[3 * n - 1] - z0;
+            for (let i = 0; i < n; i++) v[3 * i + 2] -= z0 + (travel * hips.times[i]) / clip.duration;
+            walkSpeed = +(travel / 100 / clip.duration).toFixed(3);
+          }
+          clips.push(clip);
+        }
+        const clip = clips[0];
+        if (q.get("prop")) {
+          const mixer = new THREE.AnimationMixer(person);
+          const held = clips.find((c) => c.name === q.get("propClip")) ?? clip;
+          mixer.clipAction(held).play();
+          attachProp(q.get("prop"), person, mixer, held, +(q.get("propAt") || 0));
+          mixer.stopAllAction();
+          mixer.uncacheRoot(person);
+        }
 
         if (q.has("preview")) {
           const mixer = new THREE.AnimationMixer(person);
@@ -86,7 +118,10 @@
           r.render(scene, cam);
           window.done = r.domElement.toDataURL("image/png");
         } else {
-          const glb = await new GLTFExporter().parseAsync(person, { binary: true, animations: [clip] });
+          // (FBXLoader's notes on every bone would go out as glTF extras: only the walk speed does)
+          person.traverse((o) => (o.userData = {}));
+          if (walkSpeed) person.userData.walkSpeed = walkSpeed;
+          const glb = await new GLTFExporter().parseAsync(person, { binary: true, animations: clips });
           await fetch(`/out/${q.get("id")}.glb`, { method: "POST", body: glb });
           window.done = "glb";
         }

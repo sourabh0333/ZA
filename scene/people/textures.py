@@ -42,6 +42,6 @@ if __name__ == "__main__":
     assets = sys.argv[1]
     only = sys.argv[2:]
     cast = [p for p in json.load(open(os.path.join(HERE, "cast.json")))["people"] if not only or p["id"] in only]
-    for avatar in sorted({p["avatar"] for p in cast}):
-        convert(os.path.join(assets, "Avatars", "Adults", avatar, "Textures"), os.path.join(OUT, avatar))
+    for group, avatar in sorted({(p.get("group", "Adults"), p["avatar"]) for p in cast}):
+        convert(os.path.join(assets, "Avatars", group, avatar, "Textures"), os.path.join(OUT, avatar))
         print("textures", avatar)

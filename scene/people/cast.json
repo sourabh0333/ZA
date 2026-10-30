@@ -1,15 +1,20 @@
 {
-  "_": "Who stands in the gallery: a Rocketbox avatar and the idle clip it plays. Where each one stands is in src/components/gallery/visitors.js.",
+  "_": "Who is in the gallery: a Rocketbox avatar (from Avatars/<group>, Adults by default), the clips it plays (the first is its own; a walker's are its walk and what it does when it stops, a drinker's how it holds the glass and how it sips) and the prop in its hand, placed as the hands are at fraction `at` of `clip` (scene/people/props.js). Where each one is, and how the clips take turns, is in src/components/gallery/visitors.js.",
   "people": [
-    { "id": "textile", "avatar": "Female_Adult_14", "anim": "f_idle_neutral_02" },
+    { "id": "receptionist", "group": "Professions", "avatar": "Business_Female_01", "anim": "f_gestic_talk_neutral_01" },
+    { "id": "guest", "avatar": "Male_Adult_08", "anim": "m_gestic_listen_accept_01" },
+    { "id": "stroller", "avatar": "Female_Adult_05", "anim": ["f_walk_stroll_01", "f_idle_look_around_01"] },
+    { "id": "lounge", "avatar": "Male_Adult_14", "anim": "m_sit_chair_idle_relaxed_01" },
+    { "id": "textile", "avatar": "Female_Adult_14", "anim": "f_take_picture", "prop": { "kind": "camera", "at": 0.4 } },
     { "id": "elder", "avatar": "Male_Adult_03", "anim": "m_idle_neutral_02" },
-    { "id": "cardigan", "avatar": "Female_Adult_09", "anim": "f_idle_neutral_01" },
-    { "id": "blazer", "avatar": "Male_Adult_07", "anim": "m_idle_neutral_03" },
+    { "id": "cardigan", "avatar": "Female_Adult_09", "anim": "f_gestic_listen_accept_01" },
+    { "id": "blazer", "avatar": "Male_Adult_07", "anim": "m_gestic_talk_relaxed_01" },
     { "id": "stairs", "avatar": "Male_Adult_02", "anim": "m_sit_chair_idle_relaxed_01" },
-    { "id": "hall", "avatar": "Female_Adult_07", "anim": "f_idle_neutral_04" },
+    { "id": "hall", "avatar": "Female_Adult_07", "anim": ["f_drink_idle", "f_drink_drinking"], "prop": { "kind": "glass", "clip": "f_drink_drinking", "at": 0.05 } },
+    { "id": "walker", "avatar": "Male_Adult_16", "anim": ["m_walk_stroll_01", "m_idle_look_around_01"] },
     { "id": "bench", "avatar": "Female_Adult_03", "anim": "f_sit_chair_idle_neutral_01" },
-    { "id": "bronze", "avatar": "Male_Adult_05", "anim": "m_idle_neutral_05" },
-    { "id": "gilded_f", "avatar": "Female_Adult_11", "anim": "f_idle_neutral_06" },
-    { "id": "gilded_m", "avatar": "Male_Adult_12", "anim": "m_idle_neutral_07" }
+    { "id": "bronze", "avatar": "Male_Adult_05", "anim": "m_cell_phone_talk_01", "prop": { "kind": "phone", "at": 0.1 } },
+    { "id": "gilded_f", "avatar": "Female_Adult_11", "anim": "f_gestic_talk_relaxed_01" },
+    { "id": "gilded_m", "avatar": "Male_Adult_12", "anim": ["m_drink_idle", "m_drink_drinking"], "prop": { "kind": "glass", "clip": "m_drink_drinking", "at": 0.05 } }
   ]
 }

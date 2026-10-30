@@ -6,12 +6,15 @@ import { PerformanceMonitor } from "@react-three/drei";
 import {
   AgXToneMapping,
   CubeUVReflectionMapping,
+  Frustum,
   Group,
+  ImageBitmapLoader,
   LinearFilter,
   LinearMipmapLinearFilter,
+  Matrix4,
   ShaderChunk,
   SRGBColorSpace,
-  TextureLoader,
+  Texture,
   Vector3,
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -20,7 +23,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import lightmaps from "./data/lightmaps.json";
 import { frame, measureGallery } from "./framing";
 import { BRIGHT_FROM, FOV, samplePath, setFraming, VAULT, WORKS, ZONES } from "./path";
-import People, { DOWNSTAIRS, DOWNSTAIRS_URLS, ROOFTOP, ROOFTOP_URLS, stagePeople } from "./People";
+import People, { EARLY, EARLY_URLS, LATER, LATER_URLS, stagePeople } from "./People";
 import { useGallery } from "./store";
 import { VaultFx } from "./vault";
 import styles from "./gallery.module.css";
@@ -55,12 +58,23 @@ ShaderChunk.tonemapping_fragment = `
 // Start every download at once (useLoader would otherwise suspend on each in turn).
 const withMeshopt = (loader) => loader.setMeshoptDecoder(MeshoptDecoder);
 useLoader.preload(GLTFLoader, MODEL_URL, withMeshopt);
-useLoader.preload(TextureLoader, LM_URLS);
+// The lightmaps are decoded off the main thread as they arrive (as the model's
+// own textures are): loaded as plain images, each was decoded only when it was
+// uploaded, which held the main thread for a tenth of a second per map.
+const asBitmaps = (loader) => loader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none" });
+useLoader.preload(ImageBitmapLoader, LM_URLS, asBitmaps);
 useLoader.preload(HDRLoader, ENV_URLS);
-useLoader.preload(GLTFLoader, DOWNSTAIRS_URLS, withMeshopt);
+useLoader.preload(GLTFLoader, EARLY_URLS, withMeshopt);
 
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
-const UPLOAD_BUDGET = 14; // ms of texture uploads per frame while the poster is up
+// ms of texture uploads per frame: while the poster covers the view, as much as
+// keeps the page responsive (under 50 ms a task); once the view is live, a little
+const UPLOAD_BUDGET = 40;
+const LIVE_UPLOAD_BUDGET = 6;
+// How far the first view's textures reach: anything nearer, inside a lens a
+// little wider than the camera's (for the lens shift), is ready before the poster lifts.
+const FIRST_VIEW_REACH = 16;
+const FIRST_VIEW_WIDEN = 1.3;
 const FIRST_DRAWS = 3; // shaders given their first draw per frame while the poster is up
 const MAP_SLOTS = ["map", "normalMap", "roughnessMap", "metalnessMap", "emissiveMap", "lightMap", "envMap", "alphaMap", "aoMap"];
 
@@ -74,14 +88,40 @@ function drawSignature(o) {
 }
 
 
-/** Every texture the gallery's materials use (not render targets: those live on the GPU already). */
+/** The textures an object's material uses (not render targets: those live on the GPU already). */
+function texturesOfObject(o, found = new Set()) {
+  for (const v of Object.values(o.material ?? {})) if (v?.isTexture && !v.isRenderTargetTexture) found.add(v);
+  return found;
+}
+
+/** Every texture the meshes under root use. */
 function texturesOf(root) {
   const found = new Set();
   root.traverse((o) => {
-    if (!o.isMesh) return;
-    for (const v of Object.values(o.material)) if (v?.isTexture && !v.isRenderTargetTexture) found.add(v);
+    if (o.isMesh) texturesOfObject(o, found);
   });
   return [...found];
+}
+
+/** The camera where the walk starts (or wherever the page was scrolled to), with a wider lens. */
+function firstView(store, camera) {
+  const eye = camera.clone();
+  samplePath(store.target, tmpPos, tmpTarget, tmpShift);
+  eye.position.copy(tmpPos);
+  eye.lookAt(tmpTarget);
+  eye.fov = Math.min(150, camera.fov * FIRST_VIEW_WIDEN);
+  eye.updateProjectionMatrix();
+  eye.updateMatrixWorld();
+  const frustum = new Frustum().setFromProjectionMatrix(new Matrix4().multiplyMatrices(eye.projectionMatrix, eye.matrixWorldInverse));
+  return { eye: eye.position.clone(), frustum };
+}
+
+/** How far an object's nearest point is from the first view's eye, and whether it is inside its lens. */
+function seenFrom(o, view) {
+  if (!o.geometry) return { d: Infinity, seen: false };
+  if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+  const sphere = o.geometry.boundingSphere.clone().applyMatrix4(o.matrixWorld);
+  return { d: Math.max(0, sphere.center.distanceTo(view.eye) - sphere.radius), seen: view.frustum.intersectsSphere(sphere) };
 }
 
 /** Which parts of the building to draw over which stretch of the walk (path.json "zones"). */
@@ -249,9 +289,10 @@ function syncFrame(store, camera, size, dt, flags) {
 
 function Gallery({ onReady }) {
   const gltf = useLoader(GLTFLoader, MODEL_URL, withMeshopt);
-  const lmTextures = useLoader(TextureLoader, LM_URLS);
+  const lmBitmaps = useLoader(ImageBitmapLoader, LM_URLS, asBitmaps);
+  const lmTextures = useMemo(() => lmBitmaps.map((bitmap) => new Texture(bitmap)), [lmBitmaps]);
   const envs = useLoader(HDRLoader, ENV_URLS);
-  const figures = useLoader(GLTFLoader, DOWNSTAIRS_URLS, withMeshopt);
+  const figures = useLoader(GLTFLoader, EARLY_URLS, withMeshopt);
   const gl = useThree((s) => s.gl);
   const camera = useThree((s) => s.camera);
   const root = useThree((s) => s.scene);
@@ -262,7 +303,9 @@ function Gallery({ onReady }) {
   const [visitors, setVisitors] = useState(null);
   const [shown, setShown] = useState(false);
   const [live, setLive] = useState(false);
-  const [rooftop, setRooftop] = useState(null);
+  const [others, setOthers] = useState(null);
+  // the textures left for once the gallery is showing, nearest the first view first
+  const laterTextures = useRef([]);
   // (the latest callback, read when preparation ends, so a new one never restarts it)
   const onReadyRef = useRef(onReady);
   useEffect(() => {
@@ -273,42 +316,65 @@ function Gallery({ onReady }) {
 
   // Everything the first frames would otherwise do at once, done while the
   // poster is still up and spread over many frames so the page never freezes:
-  // 1. every shader compiled in parallel, off the main thread
-  // 2. every texture uploaded, a few milliseconds' worth per frame
+  // 1. every shader compiled in parallel, in the driver's own threads
+  // 2. meanwhile, the textures of what the first view shows uploaded, a few
+  //    milliseconds' worth per frame (the rest follow once the gallery is showing)
   // 3. every object drawn once, a few per frame (many GPU drivers finish a
   //    shader only at its first draw), off-screen ones and the vault's smoke too
   // Only then are the parts of the building out of view hidden and the poster faded.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const people = stagePeople(DOWNSTAIRS, figures, envs);
+      // (the intro's bar: the downloads fill its first half, this its second)
+      store.setPrep(0.05);
+      const people = stagePeople(EARLY, figures, envs);
+      const parts = [gltf.scene, ...people.group];
       const all = new Group();
-      all.add(gltf.scene, ...people.group);
-      await gl.compileAsync(all, camera, root);
-      all.remove(gltf.scene, ...people.group);
-      if (cancelled) return;
-      const textures = texturesOf(gltf.scene).concat(people.group.flatMap(texturesOf));
+      all.add(...parts);
+      const compiled = gl.compileAsync(all, camera, root);
+
+      // what the first view shows, nearest first; one object per shader and
+      // vertex layout (what the driver compiles for), from that view where it can be
+      all.updateMatrixWorld(true);
+      const view = firstView(store, camera);
+      const drawables = [];
+      for (const r of parts) {
+        r.traverse((o) => {
+          if (o.isMesh || o.isSprite) drawables.push({ o, visible: o.visible, culled: o.frustumCulled, ...seenFrom(o, view) });
+        });
+      }
+      drawables.sort((x, y) => x.d - y.d);
+      const firsts = new Map();
+      for (const { o } of [...drawables.filter((x) => x.seen), ...drawables]) {
+        const key = drawSignature(o);
+        if (!firsts.has(key)) firsts.set(key, o);
+      }
+      const now = new Set();
+      for (const { o, d, seen } of drawables) if (seen && d < FIRST_VIEW_REACH) texturesOfObject(o, now);
+      for (const o of firsts.values()) texturesOfObject(o, now);
+      const later = new Set();
+      for (const { o } of drawables) if (o.isMesh) texturesOfObject(o, later);
+      for (const t of now) later.delete(t);
+
+      const textures = [...now];
+      const uploads = textures.length;
       while (textures.length) {
         if (cancelled) return;
         const start = performance.now();
         do gl.initTexture(textures.pop());
         while (textures.length && performance.now() - start < UPLOAD_BUDGET);
+        store.setPrep(0.05 + 0.7 * (1 - textures.length / uploads));
         await nextFrame();
       }
-      // one object per shader and vertex layout (what the driver compiles for)
-      // is drawn once, whether in view or not, a few per frame; everything else
-      // waits hidden until they all have been
-      const firsts = new Map();
-      const drawables = [];
-      for (const r of [gltf.scene, ...people.group]) {
-        r.traverse((o) => {
-          if (!(o.isMesh || o.isSprite)) return;
-          drawables.push({ o, visible: o.visible, culled: o.frustumCulled });
-          const key = drawSignature(o);
-          if (!firsts.has(key)) firsts.set(key, o);
-          o.visible = false;
-          o.frustumCulled = false;
-        });
+      await compiled;
+      all.remove(...parts);
+      if (cancelled) return;
+      store.setPrep(0.8);
+
+      // the first draws, a few per frame; everything else waits hidden until they all have been
+      for (const { o } of drawables) {
+        o.visible = false;
+        o.frustumCulled = false;
       }
       setVisitors(people);
       setShown(true);
@@ -317,6 +383,7 @@ function Gallery({ onReady }) {
       for (let i = 0; i < order.length; i += FIRST_DRAWS) {
         if (cancelled) return;
         for (const o of order.slice(i, i + FIRST_DRAWS)) o.visible = true;
+        store.setPrep(0.8 + 0.2 * (i / order.length));
         await nextFrame();
       }
       for (const d of drawables) {
@@ -327,6 +394,8 @@ function Gallery({ onReady }) {
       await nextFrame();
       await nextFrame();
       if (cancelled) return;
+      store.setPrep(1);
+      laterTextures.current = [...later];
       setLive(true);
       onReadyRef.current?.();
     })();
@@ -335,30 +404,35 @@ function Gallery({ onReady }) {
     };
   }, [gl, camera, root, gltf, envs, figures, store]);
 
-  // The rooftop's visitors, once the gallery is showing: fetched, compiled and
-  // uploaded a few milliseconds per frame. They share the shaders of the
-  // visitors below, so the first time they come into view costs nothing extra.
+  // Once the gallery is showing, a few milliseconds per frame: the rest of the
+  // rooms' textures, nearest the first view first, then the other visitors
+  // (fetched meanwhile). They share the first visitor's shader, so coming into
+  // view costs them nothing extra.
   useEffect(() => {
     if (!live) return;
     let cancelled = false;
+    const upload = async (textures) => {
+      while (textures.length && !cancelled) {
+        await nextFrame();
+        const start = performance.now();
+        do gl.initTexture(textures.shift());
+        while (textures.length && performance.now() - start < LIVE_UPLOAD_BUDGET);
+      }
+    };
     (async () => {
       const loader = withMeshopt(new GLTFLoader());
-      const gltfs = await Promise.all(ROOFTOP_URLS.map((url) => loader.loadAsync(url)));
+      const fetching = Promise.all(LATER_URLS.map((url) => loader.loadAsync(url)));
+      await upload(laterTextures.current);
+      const gltfs = await fetching;
       if (cancelled) return;
-      const people = stagePeople(ROOFTOP, gltfs, envs);
+      const people = stagePeople(LATER, gltfs, envs);
       const all = new Group();
       all.add(...people.group);
       await gl.compileAsync(all, camera, root);
       all.remove(...people.group);
-      const textures = people.group.flatMap(texturesOf);
-      while (textures.length) {
-        await nextFrame();
-        if (cancelled) return;
-        const start = performance.now();
-        do gl.initTexture(textures.pop());
-        while (textures.length && performance.now() - start < UPLOAD_BUDGET / 2);
-      }
-      setRooftop(people);
+      await upload(people.group.flatMap(texturesOf));
+      if (cancelled) return;
+      setOthers(people);
     })();
     return () => {
       cancelled = true;
@@ -370,7 +444,7 @@ function Gallery({ onReady }) {
       <primitive object={gltf.scene} />
       {baked === 0 && <PreviewLights />}
       {visitors && <People staged={visitors} live={live} />}
-      {rooftop && <People staged={rooftop} live />}
+      {others && <People staged={others} live />}
     </>
   ) : null;
 }

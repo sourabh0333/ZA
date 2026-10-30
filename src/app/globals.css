@@ -23,6 +23,8 @@
 }
 
 html {
+  /* (the scrollbar keeps its room while scrolling is held, so nothing shifts) */
+  scrollbar-gutter: stable;
   background: var(--ink);
   color-scheme: dark;
   -webkit-text-size-adjust: 100%;

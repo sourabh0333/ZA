@@ -1,6 +1,10 @@
 """Bakes lighting into per-group lightmaps and renders reflection panoramas.
 
 Run: blender -b scene/out/gallery.blend -P scene/bake.py -- [--samples 256] [--only group,group] [--scale 1.0]
+     [--envs a,b,c]
+
+--only bakes just the groups named, and then renders no panoramas unless --envs
+names them (a: dark gallery, b: frame B, c: rooftop hall).
 
 For every bake group the meshes are joined, given a second UV set ("Lightmap"),
 and Cycles bakes diffuse direct + indirect light (no albedo) into a float image.
@@ -21,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.paths import BAKED_BLEND, OUT, WEB_DATA, WEB_PUBLIC  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-opts = {"samples": 256, "only": None, "scale": 1.0, "env": True}
+opts = {"samples": 256, "only": None, "scale": 1.0, "env": True, "envs": None}
 i = 0
 while i < len(argv):
     if argv[i] == "--samples":
@@ -30,6 +34,8 @@ while i < len(argv):
         opts["only"] = argv[i + 1].split(","); i += 2
     elif argv[i] == "--scale":
         opts["scale"] = float(argv[i + 1]); i += 2
+    elif argv[i] == "--envs":
+        opts["envs"] = argv[i + 1].split(","); i += 2
     elif argv[i] == "--no-env":
         opts["env"] = False; i += 1
     else:
@@ -270,11 +276,14 @@ for name, size in GROUPS.items():
         json.dump(manifest, f, indent=1)
     print(f"[bake] wrote {path} scale={scale:.4f}", flush=True)
 
-if opts["env"] and not opts["only"]:
+envs = opts["envs"] or ([] if opts["only"] else ["a", "b", "c"])
+if opts["env"] and "a" in envs:
     panorama("a", (3.0, 1.5, 1.6))
+if opts["env"] and "b" in envs:
     fb_pos = Vector((14.0, 3.5, 0.0)) + Vector((math.cos(math.radians(-40)), math.sin(math.radians(-40)), 0)) * 6.0 \
         + Vector((-math.sin(math.radians(-40)), math.cos(math.radians(-40)), 0)) * -1.0
     panorama("b", (fb_pos.x, fb_pos.y, 1.6))
+if opts["env"] and "c" in envs:
     # the rooftop hall: B(8.75, -1.0) at eye height above its floor (3.95 m)
     hall = Vector((14.0, 3.5, 0.0)) + Vector((math.cos(math.radians(-40)), math.sin(math.radians(-40)), 0)) * 8.75 \
         + Vector((-math.sin(math.radians(-40)), math.cos(math.radians(-40)), 0)) * -1.0

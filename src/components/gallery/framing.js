@@ -1,6 +1,6 @@
 import { Box3, MathUtils, Raycaster, Vector3 } from "three";
 import { FOV, KEYS, LABELS } from "./path";
-import { PEOPLE, PERSON_RADIUS } from "./visitors";
+import { FOOTPRINTS, PERSON_RADIUS } from "./visitors";
 
 // The camera path is composed for a 4:3 screen (see art_view in
 // scene/build_scene.py): about 31 degrees either side of the view. A phone held
@@ -81,7 +81,7 @@ function clearance(gallery, pos, target) {
 /** Distance along a level ray to the first visitor it would walk into (visitors.js), or Infinity. */
 function toPeople(o, dir) {
   let near = Infinity;
-  for (const { pos } of PEOPLE) {
+  for (const pos of FOOTPRINTS) {
     const fx = o.x - pos[0];
     const fz = o.z - pos[2];
     const b = fx * dir.x + fz * dir.z;

@@ -44,12 +44,16 @@ try {
   await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: 1, mobile: false });
   await send("Page.navigate", { url });
   // wait for the 3D view to replace the old poster, then let it settle
-  for (let i = 0; i < 240 && !(await evaluate(`document.querySelector('[data-hidden="true"] img') !== null`)); i++) await sleep(250);
+  const shown = () => evaluate(`document.querySelector('[data-hidden="true"] img') !== null`);
+  for (let i = 0; i < 240 && !(await shown()); i++) await sleep(250);
+  // (never save an error page or the old poster as the new one)
+  if (!(await shown())) throw new Error(`the 3D view never appeared at ${url}: is the site running?`);
   await sleep(2500);
-  // just the view: no header, overlay, vignette, loader or poster
+  // just the view: no header, overlay, vignette, intro or poster (nor, in
+  // development, Next's badge)
   await evaluate(`(() => {
     const s = document.createElement('style');
-    s.textContent = 'header, [class*="overlay"], [class*="vignette"], [class*="loader"], [class*="posterWrap"] { display: none !important; }';
+    s.textContent = 'header, [class*="overlay"], [class*="vignette"], [class*="loader"], [class*="posterWrap"], [class*="intro"], nextjs-portal { display: none !important; }';
     document.head.append(s);
   })()`);
   await sleep(500);

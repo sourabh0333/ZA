@@ -5,13 +5,13 @@ import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { preload } from "react-dom";
 import Lenis from "lenis";
-import { useProgress } from "@react-three/drei";
 import lightmaps from "./data/lightmaps.json";
 // imported, not linked from public/: its URL carries a hash of the file, so a new
 // capture (scene/tools/poster.mjs) can never be served from an old cache
 import posterImage from "./poster.webp";
 import { WALK } from "./path";
 import { GalleryContext, GalleryStore } from "./store";
+import Intro from "./Intro";
 import { SiteHeader, StageOverlay } from "./Overlay";
 import styles from "./gallery.module.css";
 
@@ -21,7 +21,8 @@ const Scene = dynamic(() => import("./Scene"), { ssr: false });
 function preloadGallery() {
   preload("/gallery/model/gallery.glb", { as: "fetch", crossOrigin: "anonymous" });
   for (const env of ["a", "b", "c"]) preload(`/gallery/env_${env}.pmrem.hdr`, { as: "fetch", crossOrigin: "anonymous" });
-  for (const lm of Object.values(lightmaps)) preload(lm.file, { as: "image", crossOrigin: "anonymous" });
+  // (fetched, as Scene.jsx decodes them off the main thread, so the preload is reused)
+  for (const lm of Object.values(lightmaps)) preload(lm.file, { as: "fetch", crossOrigin: "anonymous" });
 }
 
 const noSubscribe = () => () => {};
@@ -39,20 +40,16 @@ let cachedMode;
 const getMode = () => (cachedMode ??= detectMode());
 const getServerMode = () => "pending";
 
-function Loader({ hidden }) {
-  const { progress } = useProgress();
-  return (
-    <div className={styles.loader} data-hidden={hidden} aria-hidden="true">
-      <span className={styles.loaderBar} style={{ transform: `scaleX(${progress / 100})` }} />
-    </div>
-  );
-}
 
 export default function GalleryHero({ children }) {
   const sectionRef = useRef(null);
   const [store] = useState(() => new GalleryStore());
   const mode = useSyncExternalStore(noSubscribe, getMode, getServerMode); // pending | webgl | static
   const [ready, setReady] = useState(false);
+  // the intro has lifted: from here the page scrolls (until then it would scroll past a still poster)
+  const [entered, setEntered] = useState(false);
+  const lenisRef = useRef(null);
+  const enteredRef = useRef(false);
   if (mode === "webgl") preloadGallery();
 
   // Scroll -> progress. Lenis smooths wheel input; the camera adds its own damping.
@@ -60,6 +57,8 @@ export default function GalleryHero({ children }) {
     if (mode !== "webgl") return undefined;
     const section = sectionRef.current;
     const lenis = new Lenis({ lerp: 0.09, smoothWheel: true, wheelMultiplier: 0.9 });
+    lenisRef.current = lenis;
+    if (!enteredRef.current) lenis.stop();
     let frame = 0;
     const raf = (time) => {
       lenis.raf(time);
@@ -73,7 +72,8 @@ export default function GalleryHero({ children }) {
     });
     const update = () => {
       const { top, span } = measure();
-      store.setTarget(Math.min(1, Math.max(0, (window.scrollY - top) / span)));
+      // (a window with no height yet, such as a background tab, has no span: 0/0 would stick the camera)
+      store.setTarget(span > 0 ? Math.min(1, Math.max(0, (window.scrollY - top) / span)) : 0);
     };
     lenis.on("scroll", update);
     window.addEventListener("resize", update);
@@ -88,9 +88,15 @@ export default function GalleryHero({ children }) {
       lenis.off("scroll", update);
       window.removeEventListener("resize", update);
       lenis.destroy();
+      lenisRef.current = null;
       store.setScroller(null);
     };
   }, [mode, store]);
+
+  useEffect(() => {
+    enteredRef.current = entered;
+    if (entered) lenisRef.current?.start();
+  }, [entered]);
 
   // Dot cursor that trails the pointer (fine pointers only).
   useEffect(() => {
@@ -137,7 +143,7 @@ export default function GalleryHero({ children }) {
             <Image
               className={styles.poster}
               src={posterImage}
-              alt="The material library of ZA Gallery: shelves of samples, brass spotlights and a long oak table."
+              alt="The reception of Zigguratss: a pale stone desk under opal pendants before the gallery's backlit brass sign on fluted walnut."
               fill
               priority
               sizes="100vw"
@@ -146,11 +152,12 @@ export default function GalleryHero({ children }) {
           {mode === "webgl" && <Scene onReady={() => setReady(true)} />}
           {/* the lens vignette, over both the poster and the 3D view */}
           <div className={styles.vignette} aria-hidden="true" />
-          {mode === "webgl" && <Loader hidden={ready} />}
           <StageOverlay />
           <div className={styles.srOnly}>{children}</div>
         </div>
       </section>
+      {/* (rendered from the first paint, before WebGL is known to work; gone at once if it does not) */}
+      {mode !== "static" && <Intro ready={ready} store={store} onEnter={() => setEntered(true)} />}
     </GalleryContext.Provider>
   );
 }
