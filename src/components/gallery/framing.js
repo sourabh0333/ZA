@@ -17,6 +17,8 @@ const FRAME = 0.1; // the frame's width around the painted face, metres
 const TRANSIT = 0.72; // between works, keep this share of the designed width in view
 const WALL_GAP = 0.45; // closest the camera may back up to anything behind it
 const GAP = 12; // px between the clear area and the header
+// a stop split into one per work spreads them over this share of the walk to its neighbours
+const SPLIT = 0.35;
 
 const up = new Vector3(0, 1, 0);
 const fwd = new Vector3();
@@ -225,6 +227,29 @@ export function frame(gallery, width, height, layout) {
         dist = Math.hypot(target.x - pos.x, target.z - pos.z);
         room = clearance(gallery, pos, target);
         need = fitDistance(box, pos, target, tanX, tanY);
+      } else if (boxes.each.length > 1 && need - dist > room + 0.05) {
+        // a single stop on works the room is too small to take in at once
+        // (a pair either side of a wall's centre): a stop of its own for each,
+        // the camera turning from one to the next, left to right, just around
+        // the stop's place on the walk
+        fwd.set(target.x - pos.x, 0, target.z - pos.z).normalize();
+        right.crossVectors(fwd, up).normalize();
+        const along = [...boxes.each].sort(
+          (a, b) => a.getCenter(rel).sub(pos).dot(right) - b.getCenter(new Vector3()).sub(pos).dot(right),
+        );
+        const half = SPLIT * Math.min(k.p - KEYS[i - 1].p, KEYS[i + 1].p - k.p);
+        const step = (2 * half) / (along.length - 1);
+        along.forEach((box, j) => {
+          const aim = box.getCenter(new Vector3());
+          const at = pos.clone();
+          const d = Math.hypot(aim.x - at.x, aim.z - at.z);
+          fwd.set(aim.x - at.x, 0, aim.z - at.z).normalize();
+          const back = Math.min(fitDistance(box, at, aim, tanX, tanY) - d, clearance(gallery, at, aim));
+          at.addScaledVector(fwd, -Math.max(0, back));
+          keys.push({ ...k, p: k.p - half + j * step, pos: at.toArray(), target: aim.toArray(), split: k.p });
+          shifts.push([width / 2 - cx, height / 2 - cy]);
+        });
+        return;
       }
     } else {
       need = (dist * TRANSIT * DESIGN_HALF_H) / tanX;

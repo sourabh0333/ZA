@@ -112,7 +112,17 @@ The path is composed for a 4:3 screen. On portrait screens and phones on
 their side the site refits it (`src/components/gallery/framing.js`): it widens
 the lens and steps the camera back (never through a wall) until each work fits
 the part of the screen the header and Rooms bar leave clear. Desktop and tablet
-views are used exactly as designed.
+views are used exactly as designed. Where a stop's works are too many to fit on
+a narrow screen (a pair either side of a wall), it becomes a stop per work, the
+camera turning from one to the next.
+
+On touch screens the walk moves a stop at a time (`GalleryHero.jsx`): works
+sit less than half a screen of scroll apart, so a flick of native momentum
+skipped several and came to rest between them. While the gallery fills the
+screen, a swipe up or down travels to the next or previous stop (`getStops()`
+in `path.js`: each room's start and each view of a work) and settles exactly
+on it; a scroll that drifts in from the page below settles on the nearest.
+Wheels and trackpads keep Lenis's smooth scroll.
 
 ## Visitors
 

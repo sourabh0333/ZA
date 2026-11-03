@@ -9,7 +9,7 @@ import lightmaps from "./data/lightmaps.json";
 // imported, not linked from public/: its URL carries a hash of the file, so a new
 // capture (scene/tools/poster.mjs) can never be served from an old cache
 import posterImage from "./poster.webp";
-import { WALK } from "./path";
+import { getStops, WALK } from "./path";
 import { GalleryContext, GalleryStore } from "./store";
 import Intro from "./Intro";
 import { SiteHeader, StageOverlay, Welcome } from "./Overlay";
@@ -40,6 +40,16 @@ let cachedMode;
 const getMode = () => (cachedMode ??= detectMode());
 const getServerMode = () => "pending";
 
+// A swipe shorter than this (px) is a tap or a wobble, not a step.
+const SWIPE = 36;
+// After a touch, the scroll counts as settled once it has been still this long (ms).
+const SETTLE = 160;
+
+/** Seconds to travel between two stops: short hops are quick, the stairs take longer. */
+const travelTime = (from, to) => Math.min(2.2, 0.9 + Math.abs(to - from) * 9);
+
+/** Which of the stops is nearest to progress p. */
+const nearestStop = (stops, p) => stops.reduce((best, s, i) => (Math.abs(s - p) < Math.abs(stops[best] - p) ? i : best), 0);
 
 export default function GalleryHero({ children }) {
   const sectionRef = useRef(null);
@@ -81,9 +91,94 @@ export default function GalleryHero({ children }) {
     store.snap();
     store.setScroller((p) => {
       const { top, span } = measure();
+      goal = -1; // (a swipe after this steps on from where the Rooms menu lands)
       lenis.scrollTo(top + p * span, { duration: 2.4, easing: (t) => 1 - Math.pow(1 - t, 3) });
     });
+
+    // Touch screens: one swipe, one stop. A flick of native momentum scroll
+    // carried the walk past several works (they sit less than half a screen of
+    // scroll apart) and came to rest between them, half turned to a wall; so
+    // while the gallery fills the screen a swipe up or down travels to the next
+    // or previous stop and settles exactly on it, and a scroll that drifts in
+    // from the page below settles on the nearest. Wheels and trackpads keep
+    // Lenis's smooth scroll.
+    let swipe = null; // where the touch began, if it is ours
+    let goal = -1; // the stop being travelled to
+    let touched = false; // the last scroll came from a touch screen
+    let settle = 0;
+    const progress = () => {
+      const { top, span } = measure();
+      return span > 0 ? (window.scrollY - top) / span : 0;
+    };
+    // (the gallery fills the screen from its first stop to its last)
+    const inside = () => {
+      const p = progress();
+      return p > -0.001 && p < 1.001;
+    };
+    const travel = (to) => {
+      const { top, span } = measure();
+      const stops = getStops();
+      const from = progress();
+      goal = to;
+      const done = () => {
+        goal = -1;
+      };
+      if (to >= stops.length) {
+        // past the last stop: on down the page, to what follows the gallery
+        lenis.scrollTo(top + section.offsetHeight, { duration: 1.2, easing: (t) => 1 - Math.pow(1 - t, 3), onComplete: done });
+        return;
+      }
+      lenis.scrollTo(top + stops[Math.max(0, to)] * span, {
+        duration: travelTime(from, stops[Math.max(0, to)]),
+        easing: (t) => 1 - Math.pow(1 - t, 3),
+        onComplete: done,
+      });
+    };
+    const onTouchStart = (e) => {
+      touched = true;
+      swipe = enteredRef.current && e.touches.length === 1 && inside() ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+    };
+    const onTouchMove = (e) => {
+      // (the page itself does not move: the swipe's end decides where it goes)
+      if (swipe && e.cancelable) e.preventDefault();
+    };
+    const onTouchEnd = (e) => {
+      if (!swipe) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - swipe.x;
+      const dy = swipe.y - t.clientY; // up the screen: on along the walk
+      swipe = null;
+      if (Math.abs(dy) < SWIPE || Math.abs(dx) > Math.abs(dy)) return;
+      // (swipes in quick succession step on from where the last one is heading)
+      const from = goal >= 0 ? goal : nearestStop(getStops(), progress());
+      travel(Math.max(0, from + Math.sign(dy)));
+    };
+    const onScroll = () => {
+      clearTimeout(settle);
+      if (!touched || goal >= 0) return;
+      settle = setTimeout(() => {
+        if (goal >= 0 || swipe || !enteredRef.current || !inside()) return;
+        const { span } = measure();
+        const stops = getStops();
+        const i = nearestStop(stops, progress());
+        if (Math.abs(stops[i] - progress()) * span > 2) travel(i);
+      }, SETTLE);
+    };
+    const onWheel = () => {
+      touched = false;
+    };
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: true });
     return () => {
+      clearTimeout(settle);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onWheel);
       cancelAnimationFrame(frame);
       lenis.off("scroll", update);
       window.removeEventListener("resize", update);

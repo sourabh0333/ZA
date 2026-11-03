@@ -89,7 +89,10 @@ export function Welcome({ shown }) {
           <span>Zigguratss &middot; Art Gallery</span>
         </p>
         <p className={styles.welcomeTitle}>Step Inside the Gallery</p>
-        <p className={styles.welcomeSub}>Scroll to walk through six rooms of original art</p>
+        <p className={styles.welcomeSub}>
+          <span className={styles.onPointer}>Scroll</span>
+          <span className={styles.onTouch}>Swipe up</span> to walk through six rooms of original art
+        </p>
         <span className={styles.welcomeCue} />
       </div>
     </div>

@@ -707,6 +707,21 @@
   color: rgb(244 239 231 / 0.72);
 }
 
+/* the word for how the walk moves: scroll with a wheel, swipe on a touch screen */
+.onTouch {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .onPointer {
+    display: none;
+  }
+
+  .onTouch {
+    display: inline;
+  }
+}
+
 /* a hairline with a drop of gold running down it: scroll */
 .welcomeCue {
   position: relative;

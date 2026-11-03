@@ -41,10 +41,14 @@ function monotone(xs, ys) {
   };
 }
 
-const remap = monotone(
-  pathData.keys.map((k) => k.p),
-  pathData.keys.map((_, i) => i / (pathData.keys.length - 1)),
-);
+/** Scroll progress -> position along the curve through these keys (evenly spaced, one per key). */
+const remapFor = (keys) =>
+  monotone(
+    keys.map((k) => k.p),
+    keys.map((_, i) => i / (keys.length - 1)),
+  );
+
+let remap = remapFor(pathData.keys);
 
 function curves(keys) {
   return {
@@ -58,10 +62,18 @@ function curves(keys) {
 let path = curves(pathData.keys);
 let shifts = null;
 
-/** Replaces the camera positions (same keys, same timing) and the per-key lens shift [x, y] in px. */
+/**
+ * Replaces the camera path and the per-key lens shift [x, y] in px. The keys
+ * are the designed ones moved, plus, on narrow screens, one per work where a
+ * stop's works are too many to see at once (`split`: the stop they replace).
+ */
 export function setFraming(keys, keyShifts) {
   path = curves(keys);
+  remap = remapFor(keys);
   shifts = keyShifts;
+  const split = keys.filter((k) => k.split !== undefined);
+  const replaced = new Set(split.map((k) => k.split));
+  stops = [...STOPS.filter((s) => !replaced.has(s)), ...split.map((k) => k.p)].sort((a, b) => a - b);
 }
 
 export const KEYS = pathData.keys;
@@ -73,6 +85,14 @@ export const LABELS = pathData.labels; // the works each stop frames, for fittin
 export const WORKS = pathData.works; // each work: its stretch of the walk and who made it (its wall label)
 export const VAULT = pathData.vault;
 export const ZONES = pathData.zones; // which parts of the building to draw over which stretch of the walk
+// Where the walk comes to rest, in order: the start of each room and each view
+// of a work (both ends of a view that pans along a group). A swipe on a touch
+// screen moves from one to the next (GalleryHero.jsx).
+const STOPS = [...new Set([...ROOMS.map((r) => r.p), ...LABELS.flatMap((l) => l.range)])].sort((a, b) => a - b);
+let stops = STOPS;
+
+/** The stops on this screen (narrow ones give each work of a crowded stop its own). */
+export const getStops = () => stops;
 
 /** Camera position and target at a scroll progress; returns the lens shift [x, y] in px. */
 export function samplePath(progress, outPos, outTarget, outShift) {
