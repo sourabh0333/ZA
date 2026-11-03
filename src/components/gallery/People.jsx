@@ -32,9 +32,13 @@ const ENV_LIGHT = { a: 1.7, b: 1.0, c: 1.0 };
 const ENV_INDEX = { a: 0, b: 1, c: 2 };
 // a figure further than this from the camera is neither animated nor drawn
 const NEAR = 16;
-// seconds: one clip blending into the next; a stroller turning round
+// seconds: one clip blending into the next; a stroller turning round, and
+// turning a corner as it walks
 const FADE = 0.5;
 const TURN = 1.1;
+const CORNER = 0.6;
+// a figure the camera passes within this of (as on the stairs) is hidden while it does
+const CLEAR = 0.6;
 
 /** A soft dark ellipse, for grounding figures that cast no real shadow. */
 function shadowTexture() {
@@ -125,66 +129,84 @@ function acting(p, mixer, clips) {
 }
 
 /**
- * Strolls from pos to walk.to and back: walking on the spot (as baked) while
- * the figure moves at the walk's own speed, so the feet never slide; at each
- * end it turns to that end's look point and plays its second clip, then turns
- * and walks back.
+ * Strolls from pos to walk.to (or along walk.path) and back: walking on the
+ * spot (as baked) while the figure moves at the walk's own speed over the
+ * floor, so the feet never slide; up and down with the way where it climbs (as
+ * on the stairs); turning at each corner as it walks; at each end it turns to
+ * that end's look point and plays its second clip, then turns and walks back.
  */
 function strolling(p, mixer, clips, figure, speed) {
   const walk = mixer.clipAction(clips[0]).setLoop(LoopRepeat, Infinity);
   const pause = mixer.clipAction(clips[1]).setLoop(LoopRepeat, Infinity);
-  const ends = [new Vector3(p.pos[0], p.pos[1], p.pos[2]), new Vector3(p.walk.to[0], p.pos[1], p.walk.to[1])];
+  const points = [p.pos, ...(p.walk.path ?? [[p.walk.to[0], p.pos[1], p.walk.to[1]]])].map(([x, y, z]) => new Vector3(x, y, z));
+  const last = points.length - 1;
   const towards = new Vector3();
-  let leg = 1; // the end it is walking to
+  let next = 1; // the point it is walking to
+  let way = 1; // along the way (1) or back (-1)
   let paused = false;
-  let clock = 0; // seconds since it last set off or stopped
+  let setOff = true; // easing into its stride (after a stop; not at a corner)
+  let clock = 0; // seconds since it last set off, stopped or turned a corner
+  let turning = TURN;
   let yawFrom = 0;
   let yawTo = 0;
 
-  const face = (yaw) => {
+  const face = (yaw, seconds) => {
     yawFrom = figure.rotation.y;
     yawTo = yaw;
+    turning = seconds;
+    clock = 0;
   };
+  const towardsPoint = (i) => heading(figure.position.x, figure.position.z, points[i].x, points[i].z);
   return {
     start() {
       mixer.stopAllAction();
-      leg = 1;
+      next = 1;
+      way = 1;
       paused = false;
-      clock = TURN;
-      figure.position.lerpVectors(ends[0], ends[1], p.walk.start ?? 0);
-      figure.rotation.y = yawFrom = yawTo = heading(ends[0].x, ends[0].z, ends[1].x, ends[1].z);
+      setOff = true;
+      clock = turning = TURN;
+      figure.position.lerpVectors(points[0], points[1], p.walk.start ?? 0);
+      figure.rotation.y = yawFrom = yawTo = heading(points[0].x, points[0].z, points[1].x, points[1].z);
       walk.reset();
       walk.time = p.at % clips[0].duration;
       walk.play();
     },
     update(dt) {
       clock += dt;
-      figure.rotation.y = turn(yawFrom, yawTo, clock / TURN);
+      figure.rotation.y = turn(yawFrom, yawTo, clock / turning);
       if (paused) {
         if (clock >= pause.getClip().duration * p.walk.pause) {
           // set off back the other way
-          leg = 1 - leg;
+          way = -way;
+          next += way;
           paused = false;
-          clock = 0;
-          face(heading(figure.position.x, figure.position.z, ends[leg].x, ends[leg].z));
+          setOff = true;
+          face(towardsPoint(next), TURN);
           walk.reset().play();
           walk.crossFadeFrom(pause, FADE, false);
         }
       } else {
         // (eases into its stride as it finishes turning)
-        const step = speed * dt * MathUtils.smoothstep(clock, TURN * 0.4, TURN);
-        towards.subVectors(ends[leg], figure.position);
-        const left = towards.length();
+        const step = speed * dt * (setOff ? MathUtils.smoothstep(clock, TURN * 0.4, TURN) : 1);
+        towards.subVectors(points[next], figure.position);
+        const left = Math.hypot(towards.x, towards.z);
         if (left <= step) {
-          // arrived: stop and look
-          figure.position.copy(ends[leg]);
-          paused = true;
-          clock = 0;
-          const [lx, lz] = p.walk.looks[leg];
-          face(heading(figure.position.x, figure.position.z, lx, lz));
-          pause.reset().play();
-          pause.crossFadeFrom(walk, FADE, false);
+          figure.position.copy(points[next]);
+          if (next === 0 || next === last) {
+            // arrived: stop and look
+            paused = true;
+            const [lx, lz] = p.walk.looks[next === 0 ? 0 : 1];
+            face(heading(figure.position.x, figure.position.z, lx, lz), TURN);
+            pause.reset().play();
+            pause.crossFadeFrom(walk, FADE, false);
+          } else {
+            // a corner: on towards the next point, turning as it goes
+            next += way;
+            setOff = false;
+            face(towardsPoint(next), CORNER);
+          }
         } else {
+          // (over the floor at its speed; up or down as the way climbs)
           figure.position.addScaledVector(towards, step / left);
         }
       }
@@ -258,7 +280,10 @@ export default function People({ staged, live }) {
     group.forEach((figure, i) => {
       // far figures skip their animation, skinning and draw altogether
       const near = eye.distanceTo(figure.position) < NEAR;
-      figure.visible = near;
+      // (and one the camera is passing through is hidden till it has)
+      const at = figure.position;
+      const inTheWay = Math.hypot(eye.x - at.x, eye.z - at.z) < CLEAR && eye.y > at.y && eye.y < at.y + 2.2;
+      figure.visible = near && !inTheWay;
       figure.matrixWorldAutoUpdate = near;
       if (near) behaviours[i].update(Math.min(dt, 0.1));
     });

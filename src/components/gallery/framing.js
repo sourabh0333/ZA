@@ -146,6 +146,17 @@ function fitDistance(box, pos, target, tanX, tanY) {
   return need;
 }
 
+/** A work's box cut into its left and right halves along its wall (seen from pos toward target). */
+function halves(box, pos, target) {
+  const axis = Math.abs(target.z - pos.z) > Math.abs(target.x - pos.x) ? "x" : "z";
+  const mid = (box.min[axis] + box.max[axis]) / 2;
+  const a = box.clone();
+  const b = box.clone();
+  a.max[axis] = mid;
+  b.min[axis] = mid;
+  return [a, b];
+}
+
 /** Which stop (if any) each key frames. */
 const keyLabel = KEYS.map((k) => LABELS.find((l) => k.p >= l.range[0] - 1e-4 && k.p <= l.range[1] + 1e-4));
 
@@ -227,14 +238,16 @@ export function frame(gallery, width, height, layout) {
         dist = Math.hypot(target.x - pos.x, target.z - pos.z);
         room = clearance(gallery, pos, target);
         need = fitDistance(box, pos, target, tanX, tanY);
-      } else if (boxes.each.length > 1 && need - dist > room + 0.05) {
-        // a single stop on works the room is too small to take in at once
-        // (a pair either side of a wall's centre): a stop of its own for each,
-        // the camera turning from one to the next, left to right, just around
-        // the stop's place on the walk
+      } else if (need - dist > room + 0.05) {
+        // a single stop on works the room is too small to take in at once (a
+        // pair either side of a wall's centre, or one wide canvas with a
+        // sculpture behind the camera): a stop of its own for each work, or
+        // each half of the one, the camera turning from one to the next, left
+        // to right, just around the stop's place on the walk
+        const parts = boxes.each.length > 1 ? boxes.each : halves(boxes.all, pos, target);
         fwd.set(target.x - pos.x, 0, target.z - pos.z).normalize();
         right.crossVectors(fwd, up).normalize();
-        const along = [...boxes.each].sort(
+        const along = [...parts].sort(
           (a, b) => a.getCenter(rel).sub(pos).dot(right) - b.getCenter(new Vector3()).sub(pos).dot(right),
         );
         const half = SPLIT * Math.min(k.p - KEYS[i - 1].p, KEYS[i + 1].p - k.p);

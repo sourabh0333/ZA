@@ -22,6 +22,9 @@ B="tools/blender-4.5.15-windows-x64/blender.exe"
 | 8. Poster still (with the site running) | `node scene/tools/poster.mjs http://localhost:3002/` | 30 s |
 
 Re-bake a single group after a small change: `-- --only vault,furniture_b`.
+A bake stopped part way leaves each finished group's denoised image in
+`scene/out/bake/`; `--reuse floor_b` takes it from there rather than baking it
+again (only if the group's geometry is unchanged since).
 With `--only` no reflection panorama is rendered unless `--envs` names it
 (`a` dark gallery, `b` frame B, `c` rooftop): `-- --only library --envs a`.
 Pass `-- --web` to `build_scene.py` to also write the website's `path.json`;
@@ -37,6 +40,42 @@ vertical (two for the widest). The vault door opens onto a small room cut into
 the black volume, where the three gilded works hang. To change a work, edit its
 row in `collection.py` and rebuild; to preview the whole set as a contact sheet
 without building the scene, call `art.make(...)` for each row of `WORKS`.
+
+The reception's backlit sign carries the gallery's logo in brass relief. Its
+frame and striped Z are `scene/brand/logo_mark.svg`, traced from
+`public/brand/zigguratss-logo.png` (only 208 px, too small to print on a wall):
+the logo's alpha with its name blanked out, enlarged 8x and traced with potrace
+(`npm i potrace`; threshold 128, turdSize 20, optTolerance 0.4). The name,
+about 12 px tall in the logo and too small to trace, is set in Georgia and
+fitted to the same box (`build_scene.py`, `LOGO_*`). After a logo change,
+retrace it the same way and re-bake the `library` group.
+
+Sculpture: each piece raised on a plinth and lit by a spot of its own, placed
+(against floor plans with every stop's line of sight drawn on them) where the
+walk sees it but no stop's view of a work is blocked, clear of the visitors:
+
+- reception: a brass peacock on a black plinth left of the desk, built in
+  `build_scene.py` (`peacock()`: a fanned tail of brass rods tipped with enamel
+  eyes, after studio metal birds); a rearing porcelain horse, four and a half
+  times the figurine's size, before the dark pillar on the way to the textile
+  wall;
+- gallery room: a marble bust in the middle of the room. The walk goes round
+  it: the bust stands between the left wall's pair and between the doorway's
+  pair, and the canvas and the right wall's work are seen from in front of it
+  (a little closer than `MARGIN` would put the camera);
+- exhibition hall: a bronze lion's head guarding the vault door, a bronze
+  horse's head between the sideboard and the stairs;
+- rooftop hall: "Ziggurat" (`ziggurat()`, six turning tiers, stone and black
+  with brass bands) between the freestanding walls and the long wall; a bronze
+  whale along the long wall; a crowned stone figure in the open floor at the
+  west end and a carved elephant, twelve times the figurine's size, in the
+  corner beyond; three bronze manta rays hung on wires along the glass; and
+  on the terrace a polished steel torus knot against the skyline.
+
+The bust, horses, lion, whale, ray, figure and elephant are Poly Haven models
+(`fetch-assets.mjs`; the ray is taken off its stand). They bake with their
+rooms (`furniture_a`, `room`, `furniture_b`, `roof`, `art_roof`), whose floors
+carry the plinths' shadows.
 
 The walk ends on the roof. The beige room's stairs turn at a landing in the far
 corner and climb the right wall through an opening in the ceiling (twenty
@@ -114,15 +153,19 @@ the lens and steps the camera back (never through a wall) until each work fits
 the part of the screen the header and Rooms bar leave clear. Desktop and tablet
 views are used exactly as designed. Where a stop's works are too many to fit on
 a narrow screen (a pair either side of a wall), it becomes a stop per work, the
-camera turning from one to the next.
+camera turning from one to the next; a single work too wide for the room to
+step back from (the gallery room's canvas, with the bust behind the camera)
+becomes two stops, on its left half and then its right.
 
 On touch screens the walk moves a stop at a time (`GalleryHero.jsx`): works
 sit less than half a screen of scroll apart, so a flick of native momentum
 skipped several and came to rest between them. While the gallery fills the
-screen, a swipe up or down travels to the next or previous stop (`getStops()`
-in `path.js`: each room's start and each view of a work) and settles exactly
-on it; a scroll that drifts in from the page below settles on the nearest.
-Wheels and trackpads keep Lenis's smooth scroll.
+screen, a swipe up or left travels to the next stop and down or right to the
+previous one (`getStops()` in `path.js`: each room's start and each view of a
+work) and settles exactly on it; a scroll that drifts in from the page below
+settles on the nearest. Wheels and trackpads keep Lenis's smooth scroll. On a
+keyboard the right and left arrows step the same way (up and down still scroll
+the page), the right arrow going on down the page after the last work.
 
 ## Visitors
 
@@ -169,10 +212,29 @@ the figure at exactly that speed, so the feet never slide.
 Where they are, what they look at, how their clips take turns (a glass held,
 then sipped) and where strollers walk is set on the website, in
 `src/components/gallery/visitors.js`: nobody stops between the camera and a
-work it stops at (the exhibition hall has no stroller for that reason: every
-way across it is some stop's view), and the phone framing keeps its camera
+work it stops at (the exhibition hall's one walker takes the stairs, the only
+way across it that is no stop's view), and the phone framing keeps its camera
 clear of every spot they stand on or walk over. The reception's (`first`) are
 prepared with the rooms, before the poster lifts, and cost the opening about a
 second; the others are fetched once the gallery is showing, in list order (so
 keep it in walk order), and share their shaders.
 
+A walker goes from `pos` to `to` and back, or along `path`, a list of
+`[x, y, z]` points, which may climb: the climber takes both flights of stairs
+to the roof, its height following each leg. A figure the camera passes through
+(on the stairs, say) is hidden while the camera is within 0.6 m of it.
+
+## The hang
+
+The frames show works from zigguratss.com. `node scene/tools/fetch-zigguratss.mjs [n]`
+reads the site's category listings (each card carries the title, image and size
+as data attributes beside the artist's link; the medium is in the page's path)
+and writes up to n works (80 by default) to
+`src/components/gallery/data/catalogue.json`, their images resized to 1024 px
+WebP in `public/gallery/art/`. Once the gallery is showing,
+`src/components/gallery/hanging.js` hangs a work of about its proportions
+(cropped to fill) in every frame, a new order each visit, skipping frames in
+view; then every 15 seconds three frames out of view (or further than 14 m)
+that have shown their work at least 45 seconds change to the next. A work in
+view never changes. The vault's three gilded works stay. Each wall label shows
+the work in its frame, with a link to its page on zigguratss.com.

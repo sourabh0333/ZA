@@ -16,10 +16,11 @@
 //   opens (the rest are fetched once it is showing, in this order)
 // acts: how its clips take turns, [clip, times] pairs played round and round
 //   (by default its one clip, played forth and back)
-// walk: a stroller's way: from pos to `to` (x, z) and back, at the speed its
-//   walk was baked with; at each end it turns to `looks` (one point per end)
-//   and plays its second clip `pause` times before turning back. `start` is
-//   how far along the first leg it begins (0 to 1)
+// walk: a stroller's way: from pos to `to` (x, z) and back, or along `path`
+//   ([x, y, z] points after pos, up stairs as well), at the speed its walk was
+//   baked with; at each end it turns to `looks` (one point per end) and plays
+//   its second clip `pause` times before turning back. `start` is how far
+//   along the first leg it begins (0 to 1)
 //
 // Nobody stops between the camera and the work it stops at, nor comes within
 // a metre of the path (framing.js also keeps the phone camera clear of them).
@@ -60,9 +61,45 @@ export const PEOPLE = [
   // photographs it on her phone
   { id: "textile", pos: [10.6, 0, -3.9], look: [9.3, -5.7], env: "a", at: 4.5 },
   { id: "elder", pos: [7.3, 0, -3.95], look: [8.5, -5.7], env: "a", at: 0 },
-  // the gallery room: a couple to the right of the monumental canvas, talking it over
-  { id: "cardigan", pos: [16.8, 0, -14.55], look: [15.3, -16], env: "a", at: 2 },
-  { id: "blazer", pos: [17.4, 0, -14.4], look: [15.5, -16], env: "a", at: 9 },
+  // a visitor wandering past them, from the porcelain horse to the pier and back
+  // (a metre clear of the walk and of them; neither end in a view of a work)
+  {
+    id: "textile_walker",
+    pos: [6.4, 0, -2.7],
+    look: [11.2, -2.9],
+    env: "a",
+    at: 0,
+    walk: { to: [11.2, -2.9], looks: [[5.3, -4.6], [13.1, -5.65]], pause: 1, start: 0.6 },
+  },
+  // the gallery room, the bust in its middle: a couple face to face right of the
+  // monumental canvas, talking it over, and three guests over drinks in the far
+  // left corner, beyond the left wall's pair (both seen as you come in, either
+  // side of the canvas)
+  { id: "cardigan", pos: [17.15, 0, -14.95], look: [17.85, -15.3], env: "a", at: 2 },
+  { id: "blazer", pos: [17.85, 0, -15.3], look: [17.15, -14.95], env: "a", at: 9 },
+  {
+    id: "room_wine",
+    pos: [12.65, 0, -15.15],
+    look: [13.05, -15.12],
+    env: "a",
+    at: 4,
+    acts: [
+      ["f_drink_idle", 1],
+      ["f_drink_drinking", 1],
+    ],
+  },
+  { id: "room_talk", pos: [13.35, 0, -15.45], look: [13.05, -15.12], env: "a", at: 11 },
+  {
+    id: "room_drink",
+    pos: [13.15, 0, -14.75],
+    look: [13.05, -15.12],
+    env: "a",
+    at: 1,
+    acts: [
+      ["m_drink_idle", 2],
+      ["m_drink_drinking", 1],
+    ],
+  },
   // the exhibition hall: one on the stairs facing the blue colour field, one at the sideboard
   {
     // third step (0.59 m), against the wall, clear of the way up to the roof;
@@ -88,6 +125,47 @@ export const PEOPLE = [
       ["f_drink_idle", 1],
       ["f_drink_drinking", 1],
     ],
+  },
+  // a couple chatting at the foot of the stairs, he with a glass of wine
+  {
+    id: "hall_wine",
+    pos: [26.51, 0.031, 6.48],
+    look: [27.13, 7.0],
+    env: "b",
+    at: 8,
+    acts: [
+      ["m_drink_idle", 1],
+      ["m_drink_drinking", 1],
+    ],
+  },
+  { id: "hall_talk", pos: [27.13, 0.031, 7.0], look: [26.51, 6.48], env: "b", at: 2 },
+  // a visitor climbing to the roof: along the first flight (beside the one
+  // sitting on it), across the landing, up the second flight, a look round the
+  // rooftop hall, and back down; the treads' middles taken as a slope (frame B
+  // u 13.9 to 18, from 0.03 to 3.95 m up)
+  {
+    id: "climber",
+    pos: [27.06, 0.031, 2.57],
+    look: [27.93, 3.23],
+    env: "b",
+    at: 0,
+    walk: {
+      path: [
+        [27.93, 0.031, 3.23],
+        [29.54, 1.383, 4.58],
+        [29.99, 1.58, 4.83],
+        [30.07, 1.58, 5.35],
+        [29.88, 1.778, 5.58],
+        [27.76, 3.95, 8.11],
+        [27.31, 3.95, 8.65],
+      ],
+      looks: [
+        [27.17, 1.35],
+        [22.3, 2.16],
+      ],
+      pause: 1,
+      start: 0.0,
+    },
   },
   // the rooftop hall: one on the bench looking out at the city through the glass
   {
@@ -128,17 +206,82 @@ export const PEOPLE = [
       ["m_drink_drinking", 1],
     ],
   },
+  // three guests over drinks in the middle of the hall, between "Bronze Hour"'s
+  // visitor and the whale: one sips her wine, one talks, one listens
+  {
+    id: "roof_wine",
+    pos: [24.04, 3.95, 3.02],
+    look: [24.56, 3.21],
+    env: "c",
+    at: 14,
+    acts: [
+      ["f_drink_idle", 1],
+      ["f_drink_drinking", 1],
+    ],
+  },
+  { id: "roof_suit", pos: [24.65, 3.95, 3.75], look: [24.56, 3.21], env: "c", at: 6 },
+  { id: "roof_listen", pos: [24.98, 3.95, 2.86], look: [24.56, 3.21], env: "c", at: 3 },
+  // two more join them, one with a glass of wine
+  {
+    id: "roof_party_m",
+    pos: [24.42, 3.95, 2.37],
+    look: [24.56, 3.21],
+    env: "c",
+    at: 9,
+    acts: [
+      ["m_drink_idle", 2],
+      ["m_drink_drinking", 1],
+    ],
+  },
+  { id: "roof_party_f", pos: [25.36, 3.95, 3.5], look: [24.56, 3.21], env: "c", at: 16 },
+  // one photographing the stone figure at the hall's west end
+  { id: "roof_photo", pos: [18.13, 3.95, -1.73], look: [17.3, -3.08], env: "c", at: 2 },
+  // out on the terrace, a couple with drinks at the parapet's east end, the city
+  // behind them (seen through the glass as the walk comes up the stairs)
+  {
+    id: "terrace_wine",
+    pos: [20.43, 3.95, 11.56],
+    look: [20.64, 12.39],
+    env: "c",
+    light: 0.6,
+    at: 5,
+    acts: [
+      ["f_drink_idle", 1],
+      ["f_drink_drinking", 1],
+    ],
+  },
+  {
+    id: "terrace_toast",
+    pos: [20.64, 3.95, 12.39],
+    look: [20.43, 11.56],
+    env: "c",
+    light: 0.6,
+    at: 12,
+    acts: [
+      ["m_drink_idle", 1],
+      ["m_drink_drinking", 1],
+    ],
+  },
+  // one exploring along the long wall, from its first work to "Ziggurat"
+  {
+    id: "roof_explorer",
+    pos: [18.69, 3.95, -3.48],
+    look: [21.05, -1.63],
+    env: "c",
+    at: 0,
+    walk: { to: [21.05, -1.63], looks: [[18.75, -6.83], [21.57, 0.31]], pause: 1, start: 0.5 },
+  },
 ];
 
 /** Every point of floor a visitor stands on or walks over, a step apart (for keeping the camera clear). */
 export const FOOTPRINTS = PEOPLE.flatMap(({ pos, walk }) => {
   if (!walk) return [pos];
-  const steps = Math.ceil(Math.hypot(walk.to[0] - pos[0], walk.to[1] - pos[2]) / 0.5);
-  return Array.from({ length: steps + 1 }, (_, i) => [
-    pos[0] + ((walk.to[0] - pos[0]) * i) / steps,
-    pos[1],
-    pos[2] + ((walk.to[1] - pos[2]) * i) / steps,
-  ]);
+  const points = [pos, ...(walk.path ?? [[walk.to[0], pos[1], walk.to[1]]])];
+  return points.slice(1).flatMap((b, k) => {
+    const a = points[k];
+    const steps = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[2] - a[2]) / 0.5));
+    return Array.from({ length: steps + 1 }, (_, i) => a.map((c, j) => c + ((b[j] - c) * i) / steps));
+  });
 });
 
 /** Radius of floor each figure takes up, for keeping the camera clear. */

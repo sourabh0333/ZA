@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ROOMS, WORKS } from "./path";
 import { useGallery } from "./store";
 import { CartIcon, ExpandIcon, PlanIcon, SearchIcon, UserIcon } from "./icons";
@@ -90,7 +90,7 @@ export function Welcome({ shown }) {
         </p>
         <p className={styles.welcomeTitle}>Step Inside the Gallery</p>
         <p className={styles.welcomeSub}>
-          <span className={styles.onPointer}>Scroll</span>
+          <span className={styles.onPointer}>Scroll or press &rarr;</span>
           <span className={styles.onTouch}>Swipe up</span> to walk through six rooms of original art
         </p>
         <span className={styles.welcomeCue} />
@@ -101,6 +101,8 @@ export function Welcome({ shown }) {
 
 export function StageOverlay() {
   const store = useGallery();
+  // (the labels follow the hang: what each frame shows now, hanging.js)
+  useSyncExternalStore(store.subscribeHung, store.getHungVersion, store.getHungVersion);
   const [roomsOpen, setRoomsOpen] = useState(false);
   const roomsRef = useRef(null);
   const fullscreen = useSyncExternalStore(noSubscribe, canFullscreen, () => false);
@@ -137,19 +139,24 @@ export function StageOverlay() {
 
       {/* each work's wall label: shows by itself as the camera arrives at the work
           (Scene.jsx places it under the work, or beside it where there is no room) */}
-      {WORKS.map((w) => (
-        <aside key={w.id} className={styles.artLabel} ref={(el) => store.setWork(w.id, el)}>
-          <p className={styles.artLabelTitle}>{w.title}</p>
-          <p className={styles.artLabelArtist}>{w.artist}</p>
-          <p className={styles.artLabelMeta}>
-            {w.year}
-            <span aria-hidden="true">·</span>
-            {w.medium}
-            <span aria-hidden="true">·</span>
-            {w.size}
-          </p>
-        </aside>
-      ))}
+      {WORKS.map(({ id, ...own }) => {
+        const w = store.hung.get(id) ?? own;
+        const meta = [w.year, w.medium, w.size].filter(Boolean);
+        return (
+          <aside key={id} className={styles.artLabel} ref={(el) => store.setWork(id, el)}>
+            <p className={styles.artLabelTitle}>{w.title}</p>
+            <p className={styles.artLabelArtist}>{w.artist}</p>
+            <p className={styles.artLabelMeta}>
+              {meta.map((m, i) => (
+                <Fragment key={m}>
+                  {i > 0 && <span aria-hidden="true">·</span>}
+                  <span>{m}</span>
+                </Fragment>
+              ))}
+            </p>
+          </aside>
+        );
+      })}
 
       <div className={styles.bottomLeft} ref={roomsRef}>
         <button

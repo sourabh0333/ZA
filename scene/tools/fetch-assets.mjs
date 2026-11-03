@@ -25,6 +25,17 @@ const MODELS = {
   GreenChair_01: "1k",
   ceramic_vase_02: "1k",
   brass_vase_01: "1k",
+  // sculpture: a marble bust, a rearing porcelain horse, a bronze manta ray,
+  // a bronze whale, bronze lion and horse heads, a weathered gothic figure and
+  // a carved elephant
+  marble_bust_01: "1k",
+  horse_statue_01: "1k",
+  bronze_ray_statue: "1k",
+  bronze_whale_statue: "1k",
+  lion_head: "1k",
+  horse_head: "1k",
+  gothic_statue: "1k",
+  carved_wooden_elephant: "1k",
 };
 
 async function exists(file) {

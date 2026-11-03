@@ -1,7 +1,7 @@
 {
  "floor_a": {
   "file": "/gallery/lightmaps/floor_a.webp",
-  "intensity": 1.25551,
+  "intensity": 1.25353,
   "env": "a",
   "size": 2048
  },
@@ -13,21 +13,21 @@
  },
  "library": {
   "file": "/gallery/lightmaps/library.webp",
-  "intensity": 7.14217,
+  "intensity": 6.78592,
   "env": "a",
   "size": 2048
  },
  "furniture_a": {
   "file": "/gallery/lightmaps/furniture_a.webp",
-  "intensity": 1.49727,
+  "intensity": 1.479,
   "env": "a",
   "size": 2048
  },
  "floor_b": {
   "file": "/gallery/lightmaps/floor_b.webp",
-  "intensity": 1.48873,
+  "intensity": 1.51191,
   "env": "b",
-  "size": 1024
+  "size": 2048
  },
  "walls_b": {
   "file": "/gallery/lightmaps/walls_b.webp",
@@ -43,15 +43,15 @@
  },
  "furniture_b": {
   "file": "/gallery/lightmaps/furniture_b.webp",
-  "intensity": 2.03634,
+  "intensity": 2.12732,
   "env": "b",
-  "size": 1024
+  "size": 2048
  },
  "room": {
   "file": "/gallery/lightmaps/room.webp",
-  "intensity": 1.4952,
+  "intensity": 1.55182,
   "env": "a",
-  "size": 1024
+  "size": 2048
  },
  "art": {
   "file": "/gallery/lightmaps/art.webp",
@@ -61,15 +61,15 @@
  },
  "roof": {
   "file": "/gallery/lightmaps/roof.webp",
-  "intensity": 2.7693,
+  "intensity": 2.75825,
   "env": "c",
-  "size": 1024
+  "size": 2048
  },
  "art_roof": {
   "file": "/gallery/lightmaps/art_roof.webp",
-  "intensity": 2.22866,
+  "intensity": 2.38213,
   "env": "c",
-  "size": 1024
+  "size": 2048
  },
  "sky": {
   "file": "/gallery/lightmaps/sky.webp",

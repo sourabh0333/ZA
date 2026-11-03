@@ -1,10 +1,13 @@
 """Bakes lighting into per-group lightmaps and renders reflection panoramas.
 
 Run: blender -b scene/out/gallery.blend -P scene/bake.py -- [--samples 256] [--only group,group] [--scale 1.0]
-     [--envs a,b,c]
+     [--envs a,b,c] [--reuse group,group]
 
 --only bakes just the groups named, and then renders no panoramas unless --envs
-names them (a: dark gallery, b: frame B, c: rooftop hall).
+names them (a: dark gallery, b: frame B, c: rooftop hall). --reuse takes the
+named groups' last denoised bakes (out/bake/lm_<group>.exr) instead of baking
+them again: for a group whose geometry has not changed since, when the web
+image was not written (a bake stopped part way).
 
 For every bake group the meshes are joined, given a second UV set ("Lightmap"),
 and Cycles bakes diffuse direct + indirect light (no albedo) into a float image.
@@ -17,6 +20,7 @@ import os
 import sys
 import time
 
+import bmesh
 import bpy
 import numpy as np
 from mathutils import Vector
@@ -25,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.paths import BAKED_BLEND, OUT, WEB_DATA, WEB_PUBLIC  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-opts = {"samples": 256, "only": None, "scale": 1.0, "env": True, "envs": None}
+opts = {"samples": 256, "only": None, "scale": 1.0, "env": True, "envs": None, "reuse": []}
 i = 0
 while i < len(argv):
     if argv[i] == "--samples":
@@ -34,6 +38,8 @@ while i < len(argv):
         opts["only"] = argv[i + 1].split(","); i += 2
     elif argv[i] == "--scale":
         opts["scale"] = float(argv[i + 1]); i += 2
+    elif argv[i] == "--reuse":
+        opts["reuse"] = argv[i + 1].split(","); i += 2
     elif argv[i] == "--envs":
         opts["envs"] = argv[i + 1].split(","); i += 2
     elif argv[i] == "--no-env":
@@ -51,6 +57,13 @@ FRAME_OF = {"floor_a": "a", "walls_a": "a", "library": "a", "furniture_a": "a",
             "floor_b": "b", "walls_b": "b", "vault": "b", "furniture_b": "b",
             "room": "a", "art": "a",
             "roof": "c", "art_roof": "c", "sky": "c"}
+
+# Scanned sculptures are hundreds of tiny islands: at their room's texel
+# density each has a few texels, and the site's filtering pulls dark
+# neighbours into them as black specks. Their islands are scaled up by this
+# much before packing. (Changing it changes the group's lightmap UVs: re-bake
+# the group.)
+UV_BOOST = {"room": {"marble_bust_01": 4.0}}
 
 BAKE_DIR = os.path.join(OUT, "bake")
 LM_DIR = os.path.join(WEB_PUBLIC, "lightmaps")
@@ -118,6 +131,17 @@ def lightmap_uv(ob, size):
     margin = (3.0 if ob.name == "library" else 6.0) / size
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=margin,
                              area_weight=0.0, correct_aspect=True, scale_to_bounds=False)
+    boost = UV_BOOST.get(ob.name, {})
+    if boost:
+        # (scaled up where they lie; packing then places each island apart)
+        bm = bmesh.from_edit_mesh(me)
+        uv = bm.loops.layers.uv["Lightmap"]
+        for mat_name, k in boost.items():
+            idx = [i for i, m in enumerate(me.materials) if m and m.name == mat_name]
+            loops = [lp for f in bm.faces if f.material_index in idx for lp in f.loops]
+            for lp in loops:
+                lp[uv].uv *= k
+        bmesh.update_edit_mesh(me)
     bpy.ops.uv.select_all(action="SELECT")
     bpy.ops.uv.pack_islands(rotate=True, scale=True, margin=margin)
     bpy.ops.object.mode_set(mode="OBJECT")
@@ -188,12 +212,33 @@ def denoise(path_in, path_out, size):
     return out
 
 
+def fill_empty(rgb, rounds=48):
+    """Fills the texels the bake left black from their lit neighbours, a ring
+    at a time: the empty space between islands, and the texels of islands too
+    small to catch a sample (a scanned sculpture's tiny patches), which the
+    site's filtering otherwise pulls in as black specks."""
+    empty = rgb.max(axis=2) <= 1e-6
+    for _ in range(rounds):
+        if not empty.any():
+            break
+        lit = (~empty).astype(np.float32)
+        acc = np.zeros_like(rgb)
+        cnt = np.zeros(lit.shape, np.float32)
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+            acc += np.roll(rgb * lit[..., None], (dy, dx), axis=(0, 1))
+            cnt += np.roll(lit, (dy, dx), axis=(0, 1))
+        grow = empty & (cnt > 0)
+        rgb[grow] = acc[grow] / cnt[grow][:, None]
+        empty &= ~grow
+    return rgb
+
+
 def encode_web(img, name):
     """float lightmap -> 8-bit sRGB WebP of (value / scale)."""
     w, h = img.size
     a = np.empty(w * h * 4, np.float32)
     img.pixels.foreach_get(a)
-    rgb = a.reshape(h, w, 4)[..., :3]
+    rgb = fill_empty(a.reshape(h, w, 4)[..., :3].copy())
     peak = rgb.max(axis=2)
     lit = peak[peak > 1e-5]
     scale = float(np.percentile(lit, 99.7)) if lit.size else 1.0
@@ -264,9 +309,13 @@ for name, size in GROUPS.items():
     if opts["only"] and name not in opts["only"]:
         continue
     size = int(size * opts["scale"])
-    ob, img = bake_group(name, size)
     den_path = os.path.join(BAKE_DIR, f"lm_{name}.exr")
-    den = denoise(img.filepath_raw, den_path, size)
+    if name in opts["reuse"]:
+        ob = bpy.data.objects[name]
+        den = bpy.data.images.load(den_path)
+    else:
+        ob, img = bake_group(name, size)
+        den = denoise(img.filepath_raw, den_path, size)
     path, scale = encode_web(den, name)
     bpy.data.images.remove(den)
     manifest[name] = {"file": f"/gallery/lightmaps/{name}.webp", "intensity": round(scale, 5),

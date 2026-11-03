@@ -134,6 +134,33 @@ export default function GalleryHero({ children }) {
         onComplete: done,
       });
     };
+    /** One stop on (dir 1) or back (-1): from where a step is already heading, else from here. */
+    const step = (dir) => {
+      if (goal >= 0) {
+        travel(Math.max(0, goal + dir));
+        return;
+      }
+      // (between two stops, the next one ahead or behind, never past it)
+      const stops = getStops();
+      const p = progress();
+      const ahead = stops.findIndex((s) => s > p + 1e-4);
+      const i = dir > 0 ? (ahead < 0 ? stops.length : ahead) : (ahead < 0 ? stops.length : ahead) - 1;
+      const at = stops.findIndex((s) => Math.abs(s - p) <= 1e-4);
+      travel(Math.max(0, at >= 0 ? at + dir : i));
+    };
+    // The arrow keys: right on to the next work, left back to the previous one
+    // (up and down still scroll the page as they always do)
+    const onKey = (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || !enteredRef.current) return;
+      if (e.target.closest?.("input, textarea, select, [contenteditable]")) return;
+      const p = progress();
+      const below = p >= 1.001 && p <= section.offsetHeight / measure().span;
+      if (!inside() && !(below && e.key === "ArrowLeft")) return;
+      e.preventDefault();
+      touched = false;
+      step(e.key === "ArrowRight" ? 1 : -1);
+    };
     const onTouchStart = (e) => {
       touched = true;
       swipe = enteredRef.current && e.touches.length === 1 && inside() ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
@@ -145,13 +172,12 @@ export default function GalleryHero({ children }) {
     const onTouchEnd = (e) => {
       if (!swipe) return;
       const t = e.changedTouches[0];
-      const dx = t.clientX - swipe.x;
-      const dy = swipe.y - t.clientY; // up the screen: on along the walk
+      // up or left across the screen: on along the walk; down or right: back
+      const on = Math.abs(t.clientX - swipe.x) > Math.abs(t.clientY - swipe.y) ? swipe.x - t.clientX : swipe.y - t.clientY;
       swipe = null;
-      if (Math.abs(dy) < SWIPE || Math.abs(dx) > Math.abs(dy)) return;
+      if (Math.abs(on) < SWIPE) return;
       // (swipes in quick succession step on from where the last one is heading)
-      const from = goal >= 0 ? goal : nearestStop(getStops(), progress());
-      travel(Math.max(0, from + Math.sign(dy)));
+      step(Math.sign(on));
     };
     const onScroll = () => {
       clearTimeout(settle);
@@ -172,8 +198,10 @@ export default function GalleryHero({ children }) {
     window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("keydown", onKey);
     return () => {
       clearTimeout(settle);
+      window.removeEventListener("keydown", onKey);
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);

@@ -15,6 +15,9 @@ export class GalleryStore {
   scroller = null;
   prep = 0; // how far the 3D view has got preparing itself, once downloaded (0..1)
   prepListeners = new Set();
+  hung = new Map(); // what each frame shows now, from the Zigguratss catalogue (hanging.js); else its own work
+  hungVersion = 0;
+  hungListeners = new Set();
 
   setTarget(p) {
     this.target = p;
@@ -42,6 +45,19 @@ export class GalleryStore {
   };
 
   getPrep = () => this.prep;
+
+  setHung(id, work) {
+    this.hung.set(id, work);
+    this.hungVersion += 1;
+    for (const fn of this.hungListeners) fn();
+  }
+
+  subscribeHung = (fn) => {
+    this.hungListeners.add(fn);
+    return () => this.hungListeners.delete(fn);
+  };
+
+  getHungVersion = () => this.hungVersion;
 
   setZones(zones) {
     this.zones = zones;

@@ -11,6 +11,7 @@ import json
 import math
 import os
 import random
+import re
 import sys
 
 import bpy
@@ -22,7 +23,7 @@ from lib.camera_path import to_three  # noqa: E402
 from lib.collection import CREDITS, WORKS  # noqa: E402
 from lib.geo import (area, box, cylinder, disk, finish, frame_matrix, group, link, material,  # noqa: E402
                      plane, point, rot_z, spot, torus, wall_quad)
-from lib.paths import ASSETS, BLEND, OUT, WEB_DATA  # noqa: E402
+from lib.paths import ASSETS, BLEND, OUT, SCENE, WEB_DATA  # noqa: E402
 
 random.seed(11)
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -132,7 +133,8 @@ mk("limestone", T.write_set("limestone", T.tinted_albedo("clay_plaster", (1.0, 0
 # the brand lettering: satin brass, partly diffuse, so the baked light shows it
 # gold on the website too (fully metallic, it shows only reflections, and the
 # panel faces the dark room)
-mk("brass_satin", None, color=(0.78, 0.54, 0.25), rough=0.35, metal=0.35, web={"env": 0.8})
+# (the logo's gold, #d4af37, a shade darker so the sign's spot does not wash it pale)
+mk("brass_satin", None, color=(0.56, 0.36, 0.035), rough=0.35, metal=0.35, web={"env": 0.8})
 # the hidden LED behind the brand panel: lights the fluting round it, never seen itself
 mk("emit_halo", None, color=(1, 1, 1), rough=0.3,
    emission=(1.0, 0.78, 0.55), emission_strength=400.0, web={"env": 0.0, "emissive": True})
@@ -235,6 +237,96 @@ def lettering(name, grp, mat, body, size, matrix, face=None, spacing=1.0, depth=
     return link(ob, grp)
 
 
+def svg_outlines(path):
+    """The closed outlines of an SVG's paths, as written by potrace (absolute M, L
+    and C; each outline closes where the next begins, or with Z): lists of
+    [point, handle in, handle out], in its pixels, y down."""
+    d = " ".join(re.findall(r'\sd="([^"]+)"', open(path, encoding="utf-8").read()))
+    tokens = re.findall(r"[MLCZ]|-?\d+(?:\.\d+)?", d)
+    loops, loop, cmd, i = [], None, None, 0
+
+    def num():
+        nonlocal i
+        x, y = float(tokens[i]), float(tokens[i + 1])
+        i += 2
+        return Vector((x, y, 0.0))
+
+    def close():
+        nonlocal loop
+        if not loop:
+            return
+        # (an outline ending where it began: that point takes the last one's handle in)
+        if len(loop) > 1 and (loop[-1][0] - loop[0][0]).length < 1e-3:
+            loop[0][1] = loop.pop()[1]
+        loops.append(loop)
+        loop = None
+
+    while i < len(tokens):
+        t = tokens[i]
+        if t in "MLCZ":
+            cmd = t
+            i += 1
+            if cmd in "MZ":
+                close()
+            continue
+        if cmd == "M":
+            q = num()
+            loop = [[q, q.copy(), q.copy()]]
+            cmd = "L"  # (more points after a move are lines)
+        elif cmd == "L":
+            q = num()
+            prev = loop[-1]
+            prev[2] = prev[0] + (q - prev[0]) / 3
+            loop.append([q, q - (q - prev[0]) / 3, q.copy()])
+        elif cmd == "C":
+            c1, c2, q = num(), num(), num()
+            loop[-1][2] = c1
+            loop.append([q, c2, q.copy()])
+    close()
+    return loops
+
+
+def relief(name, grp, mat, loops, matrix, depth):
+    """Outlines (svg_outlines) filled and extruded in the XZ plane facing -Y, placed
+    by `matrix` from the outlines' own units (it carries their scale)."""
+    cu = bpy.data.curves.new(name, "CURVE")
+    cu.dimensions = "2D"
+    cu.fill_mode = "BOTH"
+    cu.resolution_u = 8
+    cu.extrude = depth / matrix.to_scale().x
+    for loop in loops:
+        sp = cu.splines.new("BEZIER")
+        sp.bezier_points.add(len(loop) - 1)
+        for bp, (co, h_in, h_out) in zip(sp.bezier_points, loop):
+            bp.handle_left_type = bp.handle_right_type = "FREE"
+            # (SVG's y runs down the page)
+            bp.co = (co.x, -co.y, 0.0)
+            bp.handle_left = (h_in.x, -h_in.y, 0.0)
+            bp.handle_right = (h_out.x, -h_out.y, 0.0)
+        sp.use_cyclic_u = True
+    tmp = bpy.data.objects.new(name, cu)
+    scene.collection.objects.link(tmp)
+    me = bpy.data.meshes.new_from_object(tmp.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(tmp)
+    me.transform(matrix @ Matrix.Rotation(math.radians(90), 4, "X"))
+    me.materials.clear()
+    me.materials.append(mat)
+    box_uv(me, 0.5)
+    ob = bpy.data.objects.new(name, me)
+    scene.collection.objects.link(ob)
+    return link(ob, grp)
+
+
+def fit(ob, center, width, height):
+    """Stretches a flat XZ-plane mesh to exactly width x height, centred on center."""
+    xs = [v.co.x for v in ob.data.vertices]
+    zs = [v.co.z for v in ob.data.vertices]
+    mid = Vector(((min(xs) + max(xs)) / 2, 0.0, (min(zs) + max(zs)) / 2))
+    ob.data.transform(Matrix.Translation(Vector((center.x, 0.0, center.z)))
+                      @ Matrix.Diagonal((width / (max(xs) - min(xs)), 1.0, height / (max(zs) - min(zs)), 1.0))
+                      @ Matrix.Translation(-mid))
+
+
 def rounded(name, grp, mat, size, center, radius, tile=1.0, segments=12):
     """A box with its vertical edges rounded (a radius of half the depth makes pill ends)."""
     ob = box(name, grp, mat, size, center, tile=tile)
@@ -269,7 +361,8 @@ box("FluteShadow", G_LIB, M["black_matte"], (FLUTE_X1 - FLUTE_X0, 0.09, 0.06), (
     tile=1.0)
 
 # the brand panel, standing off the fluting with an LED hidden round its back
-PANEL_W, PANEL_H, PANEL_Z = 2.7, 1.2, 1.28
+# (near square, for the logo)
+PANEL_W, PANEL_H, PANEL_Z = 1.7, 1.3, 1.28
 panel_front = FLUTE_FRONT - 0.07
 box("BrandPanel", G_LIB, M["charcoal"], (PANEL_W, 0.04, PANEL_H), (DESK_X, panel_front + 0.02, PANEL_Z), tile=1.5, bevel=0.006)
 for i, (dx, dz, w, h) in enumerate(((0, 0.03, PANEL_W - 0.08, 0.012), (0, PANEL_H - 0.042, PANEL_W - 0.08, 0.012),
@@ -277,22 +370,30 @@ for i, (dx, dz, w, h) in enumerate(((0, 0.03, PANEL_W - 0.08, 0.012), (0, PANEL_
     box(f"BrandHalo{i}", G_LIB, M["emit_halo"], (w, 0.008, h), (DESK_X + dx, panel_front + 0.045, PANEL_Z + dz), tile=1.0)
 box("BrandStandoff", G_LIB, M["black_matte"], (PANEL_W - 0.4, 0.03, PANEL_H - 0.4), (DESK_X, panel_front + 0.055, PANEL_Z + 0.2),
     tile=1.0)
-# the gallery's mark (a Z in a square frame, after its logo) over its name in a
-# serif, as on the logo; static fonts only: a variable font's strokes overlap,
-# and the overlaps fill as holes
+# the gallery's logo, in satin brass: its frame and striped Z traced from the
+# logo itself (scene/brand/logo_mark.svg: public/brand/zigguratss-logo.png
+# traced with potrace at 8x), and its name, too small in the logo to trace,
+# set in a serif and fitted to the same place. Logo pixels (208 px square, at
+# 1x) map to metres so the logo is LOGO_H tall; static fonts only (a variable
+# font's overlapping strokes fill as holes)
+LOGO_H, LOGO_TOP, LOGO_BOTTOM, LOGO_LEFT, LOGO_RIGHT = 1.0, 8, 201, 21, 195
+LOGO_SCALE = LOGO_H / (LOGO_BOTTOM - LOGO_TOP)
+LOGO_CENTER = Vector((DESK_X, panel_front - 0.004, PANEL_Z + PANEL_H / 2))
+
+
+def logo_point(x, y):
+    """A point on the 208 px logo, on the panel."""
+    return LOGO_CENTER + Vector(((x - (LOGO_LEFT + LOGO_RIGHT) / 2) * LOGO_SCALE, 0.0, ((LOGO_TOP + LOGO_BOTTOM) / 2 - y) * LOGO_SCALE))
+
+
+TRACE = 8  # (the traced mark is 8x the logo's pixels)
+relief("BrandMark", G_LIB, M["brass_satin"], svg_outlines(os.path.join(SCENE, "brand", "logo_mark.svg")),
+       Matrix.Translation(logo_point(0, 0)) @ Matrix.Scale(LOGO_SCALE / TRACE, 4), depth=0.012)
 face_serif = font("georgia.ttf", "times.ttf")
-face_sans = font("segoeui.ttf", "arial.ttf")
-MARK, MARK_Z, BAR = 0.42, PANEL_Z + 0.86, 0.02
-for k, (dx, dz, w, h) in enumerate(((0, MARK / 2 - BAR, MARK, BAR), (0, -MARK / 2, MARK, BAR),
-                                    (-(MARK - BAR) / 2, -MARK / 2, BAR, MARK), ((MARK - BAR) / 2, -MARK / 2, BAR, MARK))):
-    box(f"BrandFrame{k}", G_LIB, M["brass_satin"], (w, 0.012, h), (DESK_X + dx, panel_front - 0.006, MARK_Z + dz), tile=1.0)
-lettering("BrandZ", G_LIB, M["brass_satin"], "Z", 0.4, Matrix.Translation((DESK_X, panel_front - 0.004, MARK_Z)), face_serif,
-          depth=0.012)
-lettering("BrandName", G_LIB, M["brass_satin"], "ZIGGURATSS", 0.2, Matrix.Translation((DESK_X, panel_front - 0.004, PANEL_Z + 0.47)),
-          face_serif, spacing=1.25, depth=0.01)
-box("BrandRule", G_LIB, M["brass_satin"], (1.1, 0.012, 0.006), (DESK_X, panel_front - 0.004, PANEL_Z + 0.33), tile=1.0)
-lettering("BrandSub", G_LIB, M["brass_satin"], "A R T   G A L L E R Y", 0.085, Matrix.Translation((DESK_X, panel_front - 0.004, PANEL_Z + 0.2)),
-          face_sans, spacing=1.4, depth=0.005)
+brand_name = lettering("BrandName", G_LIB, M["brass_satin"], "ZIGGURATSS", 0.1, Matrix.Translation(LOGO_CENTER), face_serif,
+                 depth=0.008)
+# (the logo's name: 48 to 168 px across, 177 to 191 down)
+fit(brand_name, logo_point(108, 184), 120 * LOGO_SCALE, 14 * LOGO_SCALE)
 
 # the desk: a pill-shaped block of pale stone on a recessed black plinth,
 # a thin black top, and a brass band round it a hand's width below the top
@@ -932,6 +1033,11 @@ def place_model(path, name, grp, matrix):
     meshes = []
     for o in new:
         if o.type == "MESH":
+            # (a model with shape keys renders from its basis key, which the
+            # transform below leaves where it was: the porcelain horse showed at
+            # figurine size at the origin)
+            if o.data.shape_keys:
+                o.shape_key_clear()
             o.data.transform(matrix @ o.matrix_world)
             o.parent = None
             o.matrix_world = Matrix.Identity(4)
@@ -978,6 +1084,286 @@ for mat in bpy.data.materials:
             tex.save(tex.lin_to_srgb(red), path)
             link_[0].from_node.image = bpy.data.images.load(path)
         mat["web"] = {"env": 0.15}
+
+# ================================================================ sculpture
+# One sculpture to a room, raised on a plinth so it reads across the room and
+# lit from the side by a spot of its own (light from straight above flattens a
+# form). Each stands where the walk sees it but in no stop's view of a work, and
+# clear of the visitors' places and the stroller's way: a brass peacock at the
+# reception, a marble bust in the gallery room, a porcelain horse at the
+# pillar by the textile wall, and three bronze manta rays flying under the rooftop hall's
+# ceiling. (The random state is kept as it was, so everything built after this
+# keeps its texture offsets.)
+print("[build] sculpture")
+_random_state = random.getstate()
+
+mk("enamel_teal", None, color=(0.0, 0.17, 0.16), rough=0.18, web={"env": 0.9})
+mk("enamel_blue", None, color=(0.004, 0.02, 0.09), rough=0.15, web={"env": 0.9})
+
+
+def sphere(bm, center, radii, mat, segments=16, rings=8, matrix=None):
+    """An ellipsoid into bm: radii along x, y, z, then turned by matrix (about its centre)."""
+    geom = bmesh.ops.create_uvsphere(bm, u_segments=segments, v_segments=rings, radius=1.0)
+    m = Matrix.Translation(center) @ (matrix or Matrix.Identity(4)) @ Matrix.Diagonal((*radii, 1.0))
+    bmesh.ops.transform(bm, matrix=m, verts=geom["verts"])
+    for f in {f for v in geom["verts"] for f in v.link_faces}:
+        f.material_index = mat
+        f.smooth = True
+
+
+def rod(bm, a, b, radius, mat, segments=8):
+    """A round rod from a to b into bm."""
+    a, b = Vector(a), Vector(b)
+    d = b - a
+    geom = bmesh.ops.create_cone(bm, cap_ends=True, segments=segments, radius1=radius, radius2=radius, depth=d.length)
+    m = Matrix.Translation((a + b) / 2) @ d.to_track_quat("Z", "Y").to_matrix().to_4x4()
+    bmesh.ops.transform(bm, matrix=m, verts=geom["verts"])
+    for f in {f for v in geom["verts"] for f in v.link_faces}:
+        f.material_index = mat
+        f.smooth = len(f.verts) == 4
+
+
+def peacock(at, facing):
+    """A brass peacock, after the welded and brazed metal birds of studio sculptors:
+    a smooth body and neck, a crest of beaded wires, and a fanned tail of brass
+    rods each tipped with an enamel eye (teal ring, blue pupil, gold dot), a
+    long row and a short one between. At `at` (its feet), facing `facing` degrees."""
+    bm = bmesh.new()
+    BRASS, TEAL, BLUE = 0, 1, 2
+    # legs and feet
+    for x in (-0.05, 0.05):
+        rod(bm, (x, 0.0, 0.0), (x * 0.7, -0.01, 0.3), 0.012, BRASS)
+        sphere(bm, Vector((x, -0.04, 0.008)), (0.025, 0.06, 0.008), BRASS, 12, 6)
+    # body, leaning forward, and a neck rising out of it in tapering beads
+    lean = Matrix.Rotation(math.radians(-18), 4, "X")
+    sphere(bm, Vector((0.0, 0.02, 0.43)), (0.13, 0.17, 0.2), BRASS, 24, 12, lean)
+    for i in range(9):
+        t = i / 8
+        c = Vector((0.0, -0.06 - 0.1 * math.sin(t * math.pi * 0.6), 0.56 + 0.32 * t))
+        r = 0.062 - 0.026 * t
+        sphere(bm, c, (r, r * 1.05, r * 1.15), BRASS, 16, 8)
+    head = Vector((0.0, -0.13, 0.9))
+    sphere(bm, head, (0.042, 0.055, 0.042), BRASS, 16, 8)
+    rod(bm, head + Vector((0.0, -0.04, 0.0)), head + Vector((0.0, -0.1, -0.012)), 0.01, BRASS, 6)
+    # the crest: beaded wires fanning up from the crown
+    for k in range(5):
+        a = math.radians(-24 + 12 * k)
+        tip = head + Vector((0.09 * math.sin(a), 0.015, 0.03 + 0.1 * math.cos(a)))
+        rod(bm, head + Vector((0.0, 0.0, 0.035)), tip, 0.0035, BRASS, 6)
+        sphere(bm, tip, (0.012, 0.006, 0.012), TEAL, 10, 5)
+    # the tail: rods fanned from the body's back in a plane leaning back 18
+    # degrees, spread over 140 degrees, the middle ones longest; an eye on each
+    root = Vector((0.0, 0.12, 0.42))
+    up = Vector((0.0, math.sin(math.radians(18)), math.cos(math.radians(18))))
+    side = Vector((1.0, 0.0, 0.0))
+    face = side.cross(up).normalized()  # the way the eyes look: forward and a little up
+    turn = face.to_track_quat("Z", "Y").to_matrix().to_4x4()
+    for row, (count, reach, scale) in enumerate(((23, 0.9, 1.0), (22, 0.58, 0.72))):
+        for i in range(count):
+            a = math.radians(-70 + 140 * (i + 0.5 * row) / (count - 1 + row))
+            if row and abs(a) > math.radians(70):
+                continue
+            d = (up * math.cos(a) + side * math.sin(a)).normalized()
+            length = reach * (0.86 + 0.14 * math.cos(a))
+            tip = root + d * length
+            rod(bm, root + d * 0.12, tip, 0.0045 * scale + 0.001, BRASS, 6)
+            # the eye: an oval ring of teal along the rod, a blue pupil, a gold dot
+            spin = Matrix.Rotation(math.atan2(d.dot(side), d.dot(up)), 4, "Z")
+            m = turn @ spin
+            sphere(bm, tip, (0.05 * scale, 0.068 * scale, 0.009), TEAL, 14, 6, m)
+            sphere(bm, tip + face * 0.006, (0.026 * scale, 0.034 * scale, 0.008), BLUE, 12, 6, m)
+            sphere(bm, tip + face * 0.012, (0.01 * scale, 0.012 * scale, 0.006), BRASS, 8, 4, m)
+    bmesh.ops.transform(bm, matrix=Matrix.Translation(at) @ rot_z(facing), verts=bm.verts)
+    return finish(bm, "Peacock", G_FURN_A, [M["brass"], M["enamel_teal"], M["enamel_blue"]], 0.5)
+
+
+def facing(frm, to):
+    """Degrees about Z that turn a model facing -Y at frm to face the point to."""
+    return math.degrees(math.atan2(to[0] - frm[0], -(to[1] - frm[1])))
+
+
+# the reception: the peacock on a low black plinth left of the desk, in front of
+# the fluting, its tail fanned towards the wall, turned to the room
+PEACOCK = Vector((-3.7, 5.1, 0.0))
+box("PeacockPlinth", G_FURN_A, M["black_matte"], (0.62, 0.62, 0.38), PEACOCK, tile=1.0, bevel=0.004)
+peacock(PEACOCK + Vector((0.0, 0.0, 0.38)), facing(PEACOCK, (-1.0, -0.4)))
+spot("PeacockSpot", (-2.55, 3.7, H_A - 0.02), PEACOCK + Vector((0.0, 0.1, 0.95)), 190, 42, 0.7, 3000, 0.03)
+
+# the gallery room: the marble bust on a tall white plinth in the middle of the
+# room, turned to the doorway: seen against the monumental canvas as you come
+# in, and between the pairs of works on the side walls and by the door (the
+# walk goes round it, camera path below)
+BUST = Vector((ROOM_CX, ROOM_CY, 0.0))
+BUST_PLINTH = 1.12
+box("BustPlinth", G_ROOM, M["plaster_white"], (0.42, 0.42, BUST_PLINTH), BUST, tile=1.0, bevel=0.004)
+place_model(model("marble_bust_01"), "Bust", G_ROOM,
+            Matrix.Translation(BUST + Vector((0.0, 0.0, BUST_PLINTH))) @ rot_z(facing(BUST, (ROOM_CX, RY0))) @ Matrix.Scale(1.15, 4))
+spot("BustSpot", (16.7, 10.9, H_A - 0.02), BUST + Vector((0.0, 0.0, BUST_PLINTH + 0.3)), 150, 34, 0.6, 3000, 0.03)
+
+# between the reception and the textile wall: the porcelain horse, rearing,
+# four and a half times the figurine's size on a white plinth before the dark
+# pillar the walk turns towards as it leaves the reception (a turn, not a stop:
+# no work hangs there), side on to the walk
+HORSE = Vector((5.3, 4.6, 0.0))
+HORSE_PLINTH = 0.72
+box("HorsePlinth", G_FURN_A, M["plaster_white"], (0.72, 0.72, HORSE_PLINTH), HORSE, tile=1.0, bevel=0.004)
+place_model(model("horse_statue_01"), "Horse", G_FURN_A,
+            Matrix.Translation(HORSE + Vector((0.0, 0.0, HORSE_PLINTH))) @ rot_z(facing(HORSE, (4.0, 0.1))) @ Matrix.Scale(4.5, 4))
+spot("HorseSpot", (3.9, 3.3, H_A - 0.02), HORSE + Vector((0.0, 0.0, HORSE_PLINTH + 0.5)), 170, 40, 0.6, 3000, 0.03)
+
+
+def keep_parts(ob, keep):
+    """Deletes the loose parts of ob's mesh whose bounds (lo, hi) fail keep."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    seen, drop = set(), []
+    for v in bm.verts:
+        if v in seen:
+            continue
+        part, stack = [], [v]
+        seen.add(v)
+        while stack:
+            a = stack.pop()
+            part.append(a)
+            for e in a.link_edges:
+                b = e.other_vert(a)
+                if b not in seen:
+                    seen.add(b)
+                    stack.append(b)
+        lo = Vector([min(q.co[i] for q in part) for i in range(3)])
+        hi = Vector([max(q.co[i] for q in part) for i in range(3)])
+        if not keep(lo, hi):
+            drop.extend(part)
+    bmesh.ops.delete(bm, geom=drop, context="VERTS")
+    bm.to_mesh(ob.data)
+    bm.free()
+
+
+# the rooftop hall: three bronze manta rays, three times the statuette, off its
+# stand, flying in a loose line along the glass wall, a metre and a half
+# inside it and high over the bench and the sculptures there: against the
+# skyline, in the open middle of the view as the walk comes up into the hall
+# (over the hall's middle they showed only peeking over a freestanding wall),
+# each hung from the ceiling on a fine steel wire
+ray = place_model(model("bronze_ray_statue"), "MantaRayTemplate", "art_roof", Matrix.Identity(4))[0]
+# (the stand: its flat base and the thin rod up into the ray)
+keep_parts(ray, lambda lo, hi: hi.z > 0.1 and not (hi.x - lo.x < 0.01 and hi.y - lo.y < 0.01))
+RAY_BELLY = Vector((0.0, 0.0, 0.3))  # where the stand met the ray
+for i, (x, y, dz, yaw, roll) in enumerate(((19.2, -5.4, 3.7, -35, -8), (21.0, -7.0, 3.3, -48, 6), (22.8, -8.3, 3.5, -40, -4))):
+    hang = Vector((x, y, ROOF_Z + dz))
+    me = ray.data.copy()
+    me.transform(Matrix.Translation(hang) @ rot_z(yaw) @ Matrix.Rotation(math.radians(roll), 4, "X") @ Matrix.Scale(3.0, 4)
+                 @ Matrix.Translation(-RAY_BELLY))
+    ob = bpy.data.objects.new(f"MantaRay{i}", me)
+    scene.collection.objects.link(ob)
+    link(ob, "art_roof")
+    bm = bmesh.new()
+    rod(bm, hang + Vector((0.0, 0.0, 0.25)), Vector((x, y, HALL_TOP - 0.6)), 0.0025, 0, 6)
+    finish(bm, f"MantaWire{i}", "art_roof", [M["steel_black"]], 1.0)
+bpy.data.objects.remove(ray)
+
+# More on frame B's floors, all standing (placed by the same search, in frame
+# B's own u, v: seen from the walk, in no stop's view of a work, clear of the
+# visitors): in the rooftop hall's middle, between its freestanding walls and
+# the long wall, "Ziggurat", after the gallery's name; along the long wall
+# between two of its works, the bronze whale;
+# on the terrace beyond the glass, a polished steel knot against the skyline;
+# and below, in the exhibition hall, a bronze lion's head guarding the vault
+# door and a bronze horse's head between the sideboard and the stairs.
+mk("steel_polished", None, color=(0.78, 0.79, 0.8), rough=0.1, metal=1.0, web={"env": 1.0})
+
+
+def ziggurat(at, angle):
+    """Six tiers, cream stone and black by turns, each smaller and turned a
+    little further, a band of brass under each, on a low black base."""
+    box("ZigguratBase", G_ROOF, M["black_matte"], (1.15, 1.15, 0.1), at, angle=angle, tile=1.0, bevel=0.004)
+    for i in range(6):
+        size = 0.98 - i * 0.14
+        z = 0.1 + i * 0.25
+        turn = angle + i * 7
+        box(f"ZigguratBand{i}", G_ROOF, M["brass"], (size - 0.05, size - 0.05, 0.04), at + Vector((0.0, 0.0, z)), angle=turn, tile=1.0)
+        box(f"Ziggurat{i}", G_ROOF, M["limestone" if i % 2 == 0 else "black_matte"], (size, size, 0.21),
+            at + Vector((0.0, 0.0, z + 0.04)), angle=turn, tile=1.0, bevel=0.006)
+
+
+def knot(at, height, span, angle):
+    """A (2, 3) torus knot in polished steel, standing on edge, `span` across."""
+    cu = bpy.data.curves.new("Knot", "CURVE")
+    cu.dimensions = "3D"
+    cu.bevel_depth = 0.3
+    cu.bevel_resolution = 4
+    sp = cu.splines.new("POLY")
+    n = 360
+    sp.points.add(n - 1)
+    for i in range(n):
+        t = 2 * math.pi * i / n
+        r = math.cos(3 * t) + 2
+        sp.points[i].co = (r * math.cos(2 * t), r * math.sin(2 * t), -math.sin(3 * t) * 1.2, 1.0)
+    sp.use_cyclic_u = True
+    tmp = bpy.data.objects.new("Knot", cu)
+    scene.collection.objects.link(tmp)
+    me = bpy.data.meshes.new_from_object(tmp.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(tmp)
+    me.transform(Matrix.Translation(at + Vector((0.0, 0.0, height))) @ rot_z(angle) @ Matrix.Rotation(math.radians(90), 4, "X")
+                 @ Matrix.Scale(span / 6.6, 4))
+    me.materials.append(M["steel_polished"])
+    for f in me.polygons:
+        f.use_smooth = True
+    box_uv(me, 0.5)
+    ob = bpy.data.objects.new("Knot", me)
+    scene.collection.objects.link(ob)
+    return link(ob, G_ROOF)
+
+
+# the rooftop hall
+ZIG = B(8.25, 1.95, ROOF_Z)
+ziggurat(ZIG, B_ANGLE)
+spot("ZigguratSpot", B(9.6, 0.4, HALL_TOP - 0.7), ZIG + Vector((0.0, 0.0, 0.9)), 700, 30, 0.6, 3300, 0.03)
+WHALE = B(12.9, 4.6, ROOF_Z)
+box("WhalePlinth", G_ROOF, M["plaster_white"], (1.25, 0.75, 0.5), (12.9, 4.6, ROOF_Z), frame=FB, tile=1.0, bevel=0.004)
+# (swimming along the wall, so the hall sees it side on; in the middle of the
+# hall it filled the foreground of the view of "Bronze Hour")
+place_model(model("bronze_whale_statue"), "Whale", G_ROOF,
+            Matrix.Translation(WHALE + Vector((0.0, 0.0, 0.5))) @ rot_z(B_ANGLE + 90) @ Matrix.Scale(1.25, 4))
+spot("WhaleSpot", B(12.9, 2.4, HALL_TOP - 0.7), WHALE + Vector((0.0, 0.0, 1.1)), 650, 30, 0.6, 3300, 0.03)
+# the hall's west end, past the first freestanding wall: a weathered stone
+# figure, crowned and robed, on a low black base in the open floor, turned to
+# the walk as it comes round the wall; in the corner beyond, by the first work
+# on the long wall, a carved elephant, twelve times the figurine's size, on a white
+# plinth (its model faces -x)
+GOTHIC = B(2.8, 1.8, ROOF_Z)
+box("GothicPlinth", G_ROOF, M["black_matte"], (1.75, 1.75, 0.16), (2.8, 1.8, ROOF_Z), frame=FB, tile=1.0, bevel=0.004)
+place_model(model("gothic_statue"), "Gothic", G_ROOF,
+            Matrix.Translation(GOTHIC + Vector((0.0, 0.0, 0.16))) @ rot_z(facing(GOTHIC, B(2.4, -1.4)))
+            @ Matrix.Translation((0.045, -0.41, 0.0)))
+spot("GothicSpot", B(4.6, -0.4, HALL_TOP - 0.7), GOTHIC + Vector((0.0, 0.0, 1.2)), 650, 30, 0.6, 3300, 0.03)
+ELEPHANT = B(-0.2, 3.9, ROOF_Z)
+ELEPHANT_TURN = facing(ELEPHANT, B(3.0, -0.2))
+box("ElephantPlinth", G_ROOF, M["plaster_white"], (0.85, 1.55, 0.35), ELEPHANT, angle=ELEPHANT_TURN, tile=1.0, bevel=0.004)
+place_model(model("carved_wooden_elephant"), "Elephant", G_ROOF,
+            Matrix.Translation(ELEPHANT + Vector((0.0, 0.0, 0.35))) @ rot_z(ELEPHANT_TURN + 90) @ Matrix.Scale(12.0, 4)
+            @ Matrix.Translation((0.007, 0.004, 0.0)))
+spot("ElephantSpot", B(1.6, 2.0, HALL_TOP - 0.7), ELEPHANT + Vector((0.0, 0.0, 0.9)), 500, 30, 0.6, 3300, 0.03)
+# the terrace, beyond the west end of the stroller's way
+KNOT = B(4.5, -7.6, ROOF_Z)
+box("KnotPlinth", G_ROOF, M["black_matte"], (1.0, 1.0, 0.22), (4.5, -7.6, ROOF_Z), frame=FB, tile=1.0, bevel=0.004)
+knot(KNOT, 1.32, 2.1, B_ANGLE)
+spot("KnotSpot", B(5.6, -5.3, HALL_TOP - 0.5), KNOT + Vector((0.0, 0.0, 1.2)), 500, 36, 0.6, 3300, 0.03)
+
+# the exhibition hall (its floor is 0.031 above frame A's)
+LION = B(6.6, -0.75, 0.031)
+box("LionPlinth", G_FURN_B, M["plaster_white"], (0.5, 0.5, 1.0), (6.6, -0.75, 0.031), frame=FB, tile=1.0, bevel=0.004)
+place_model(model("lion_head"), "LionHead", G_FURN_B,
+            Matrix.Translation(LION + Vector((0.0, 0.0, 1.0))) @ rot_z(facing(LION, B(9.5, -3.5))) @ Matrix.Scale(1.6, 4))
+spot("LionSpot", B(8.4, -2.4, H_B - 0.02), LION + Vector((0.0, 0.0, 1.3)), 160, 34, 0.6, 3300, 0.03)
+HORSE_HEAD = B(13.2, 4.75, 0.031)
+box("HorseHeadPlinth", G_FURN_B, M["plaster_white"], (0.5, 0.5, 1.0), (13.2, 4.75, 0.031), frame=FB, tile=1.0, bevel=0.004)
+place_model(model("horse_head"), "HorseHead", G_FURN_B,
+            Matrix.Translation(HORSE_HEAD + Vector((0.0, 0.0, 1.0))) @ rot_z(facing(HORSE_HEAD, B(12.5, 1.0))) @ Matrix.Scale(1.6, 4))
+spot("HorseHeadSpot", B(12.0, 2.8, H_B - 0.02), HORSE_HEAD + Vector((0.0, 0.0, 1.3)), 160, 34, 0.6, 3300, 0.03)
+
+random.setstate(_random_state)
+
 for mat in bpy.data.materials:
     if "web" not in mat:
         mat["web"] = {"env": 0.4}
@@ -994,7 +1380,7 @@ for i, x in enumerate([-5.2, -3.6, -1.8, -0.1, 1.5, 3.1, 4.3]):
 for i, (x, y, z) in enumerate(PENDANTS):
     spot(f"PendantSpot{i}", (x, y, z - 0.02), (x, y - 0.1, DESK_H), 120, 70, 0.8, K, 0.1)
 # a narrow spot from over the desk lights the sign's lettering face on
-spot("SignSpot", (DESK_X, 4.2, H_A - 0.02), (DESK_X, panel_front, PANEL_Z + 0.6), 160, 40, 0.6, K, 0.03)
+spot("SignSpot", (DESK_X, 4.2, H_A - 0.02), (DESK_X, panel_front, PANEL_Z + PANEL_H / 2), 160, 40, 0.6, K, 0.03)
 spot("LoungeSpot", (SOFA_X, 4.2, H_A - 0.02), (SOFA_X, 4.6, 0.3), 160, 60, 0.8, K, 0.04)
 spot("ConsoleSpot", (-5.75, 4.9, H_A - 0.02), (-5.75, WALL_Y - 0.25, 0.8), 110, 50, 0.8, K, 0.03)
 # soft fill over the room
@@ -1109,16 +1495,19 @@ STEPS = [
     # back the camera can stand for this work and the black wall's later)
     (0.05, ((14.6, 5.3, EYE), art_view("corridor")[1]), []),
     (0.04, art_view("corridor", d=2.8), ["corridor"]),
-    # through the doorway: the back wall's canvas, then each wall in turn
+    # through the doorway: the bust in the middle of the room against the back
+    # wall's canvas; then round the bust, each wall in turn: the left wall's
+    # pair (the bust between them), the canvas and the right wall's work from
+    # in front of the bust, the doorway's pair (the bust between them) from
+    # behind it, and back round its far side to the door
     (0.05, ((ROOM_CX, 9.6, EYE), (ROOM_CX, RY1, 1.75)), []),
-    (0.05, art_view("centre", d=4.95), ["centre"]),
-    (0.06, ((17.25, 12.5, EYE), (RX0, 12.5, 1.7)), ["west_0", "west_1"]),
-    # (glance back at the centre so the view never swings through the camera)
-    (0.04, ((15.6, 12.4, EYE), (15.6, RY1, 1.7)), []),
-    (0.04, art_view("east"), ["east"]),
+    (0.06, ((17.25, ROOM_CY, EYE), (RX0, ROOM_CY, 1.7)), ["west_0", "west_1"]),
+    (0.05, art_view("centre", d=2.9), ["centre"]),
+    (0.05, art_view("east", d=2.95), ["east"]),
     (0.06, ((15.12, 15.4, EYE), (15.12, RY0, 1.7)), ["door_l", "door_r"]),
+    (0.04, ((13.5, 12.4, EYE), (ROOM_CX, RY0, 1.6)), []),
     # out through the doorway to the black volume's end wall
-    (0.06, ((ROOM_CX, 9.6, EYE), (14.8, 7.0, 1.5)), []),
+    (0.04, ((ROOM_CX, 9.6, EYE), (14.8, 7.0, 1.5)), []),
     (0.05, art_view("vol_w", d=2.3), ["vol_w"]),
     # wide round the pier and the volume's corner into frame B
     (0.05, ((14.9, 6.0, EYE), (13.4, 2.5, 1.5)), []),
@@ -1171,7 +1560,7 @@ assert all(a["p"] < b["p"] for a, b in zip(keys, keys[1:]))
 WORK_TIME = {wid: i for i, (_, _, works) in enumerate(STEPS) for wid in works}
 assert set(WORK_TIME) == set(WORK_BY_ID)
 TIME_OF = dict(zip(("library", "curtain", "room", "vault", "beige", "roof"),
-                   (0.0, times[WORK_TIME["curtain"]], times[WORK_TIME["centre"]], times[WORK_TIME["vault_c"]],
+                   (0.0, times[WORK_TIME["curtain"]], times[WORK_TIME["west_0"] - 1], times[WORK_TIME["vault_c"]],
                     times[WORK_TIME["beige_field"]] - 0.07, times[WORK_TIME["hall_n3"] - 1])))
 hotspots = [
     {"id": "reception", "label": "Reception", "pos": (DESK_X + 0.9, panel_front, PANEL_Z + 1.1), "range": [P(0.0), P(0.18)]},

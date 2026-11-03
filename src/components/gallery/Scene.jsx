@@ -22,6 +22,7 @@ import { HDRLoader } from "three/examples/jsm/loaders/HDRLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import lightmaps from "./data/lightmaps.json";
 import { frame, measureGallery } from "./framing";
+import { Hanging } from "./hanging";
 import { BRIGHT_FROM, FOV, LABELS, samplePath, setFraming, VAULT, WORKS, ZONES } from "./path";
 import People, { EARLY, EARLY_URLS, LATER, LATER_URLS, stagePeople } from "./People";
 import { useGallery } from "./store";
@@ -223,9 +224,9 @@ const LABEL_SHOWS = Object.fromEntries(
 const corner = new Vector3();
 
 /**
- * Where a work's frame is on screen, in px: { left, right, top, bottom, seen }
- * (seen: the share of it inside the screen), or null when any of it is behind
- * the camera.
+ * Where a work's frame is on screen, in px: { left, right, top, bottom, seen,
+ * across } (seen: the share of it inside the screen; across: the share of the
+ * screen's width it fills), or null when any of it is behind the camera.
  */
 function frameOnScreen(corners, camera, size) {
   const f = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
@@ -243,6 +244,7 @@ function frameOnScreen(corners, camera, size) {
   const inX = Math.max(0, Math.min(f.right, size.width) - Math.max(f.left, 0));
   const inY = Math.max(0, Math.min(f.bottom, size.height) - Math.max(f.top, 0));
   f.seen = (inX * inY) / ((f.right - f.left) * (f.bottom - f.top));
+  f.across = inX / size.width;
   return f;
 }
 
@@ -337,8 +339,9 @@ function syncFrame(store, camera, size, dt, flags) {
     const [from, to] = LABEL_SHOWS[w.id];
     const corners = store.workFrames.get(w.id);
     const f = corners && p >= from && p <= to ? frameOnScreen(corners, camera, size) : null;
-    // (shown only while most of the work is on screen)
-    const show = Boolean(f) && f.seen > 0.6;
+    // (shown only while most of the work is on screen, or it fills the screen's
+    // width: a phone turning across a wide canvas, half at a time)
+    const show = Boolean(f) && (f.seen > 0.6 || f.across > 0.7);
     if (show !== flags.works[w.id]) {
       flags.works[w.id] = show;
       el.setAttribute("data-visible", String(show));
@@ -476,6 +479,15 @@ function Gallery({ onReady }) {
       cancelled = true;
     };
   }, [gl, camera, root, gltf, envs, figures, store]);
+
+  // The hang: once the gallery is showing, the frames take works from the
+  // Zigguratss catalogue, and every little while those out of view change (hanging.js)
+  useEffect(() => {
+    if (!live) return undefined;
+    const hanging = new Hanging(gltf.scene, gl, camera, (id, work) => store.setHung(id, work));
+    hanging.start();
+    return () => hanging.stop();
+  }, [live, gltf, gl, camera, store]);
 
   // Once the gallery is showing, a few milliseconds per frame: the rest of the
   // rooms' textures, nearest the first view first, then the other visitors
