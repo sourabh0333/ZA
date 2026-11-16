@@ -200,8 +200,12 @@ or the leading-slash patterns are rewritten into Windows paths.
 
 `cast.json` says which avatar (`group`: Adults, or Professions for the
 receptionist), clips and prop each visitor has; `bake.mjs` writes
-`public/gallery/people/<id>.glb` (about 8k triangles and 400 to 800 KB each,
-most of it the clips). Props (`props.js`) are built in three.js and fixed to
+`public/gallery/people/<id>.glb` (about 8k triangles and 300 to 700 KB each,
+most of it the clips). Their textures are kept small (`web.mjs`: skin and
+clothes 512 px, normal and roughness maps 256 px), since every texture is an
+upload to the GPU on a first visit and memory held there after; to bring
+figures baked before this down to those sizes without baking them again, run
+`node scene/people/shrink.mjs [id ...]`. Props (`props.js`) are built in three.js and fixed to
 the right hand, placed by where the hands are at a chosen moment of a clip: a
 wine glass in the curl of the fingers, a phone along them at the ear, a phone
 held landscape between both hands for a photo. Walks come from the "xy" clips,

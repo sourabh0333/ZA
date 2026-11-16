@@ -139,6 +139,12 @@ export const PEOPLE = [
     ],
   },
   { id: "hall_talk", pos: [27.13, 0.031, 7.0], look: [26.51, 6.48], env: "b", at: 2 },
+  // the open floor before the stairs: one photographs "Serenity" on her phone
+  // from a step back, her companion beside her looking round the hall (a metre
+  // and more clear of the walk, behind the camera while it stops at the work,
+  // and off to the side of the line from the stepped-back phone view to it)
+  { id: "hall_photo", pos: [27.75, 0.031, 5.25], look: [28.6, 1.5], env: "b", at: 2 },
+  { id: "hall_friend", pos: [27.2, 0.031, 5.75], look: [28.3, 1.6], env: "b", at: 5 },
   // a visitor climbing to the roof: along the first flight (beside the one
   // sitting on it), across the landing, up the second flight, a look round the
   // rooftop hall, and back down; the treads' middles taken as a slope (frame B

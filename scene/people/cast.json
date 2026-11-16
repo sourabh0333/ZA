@@ -19,6 +19,8 @@
     {"id": "textile_walker", "avatar": "Male_Adult_10", "anim": ["m_walk_stroll_01", "m_idle_look_around_01"]},
     {"id": "hall_wine", "avatar": "Male_Adult_13", "anim": ["m_drink_idle", "m_drink_drinking"], "prop": {"kind": "glass", "clip": "m_drink_drinking", "at": 0.05}},
     {"id": "hall_talk", "avatar": "Female_Adult_04", "anim": "f_gestic_talk_relaxed_01"},
+    {"id": "hall_photo", "avatar": "Female_Adult_08", "anim": "f_take_picture", "prop": {"kind": "camera", "at": 0.4}},
+    {"id": "hall_friend", "avatar": "Male_Adult_20", "anim": "m_idle_look_around_01"},
     {"id": "climber", "avatar": "Male_Adult_09", "anim": ["m_walk_slow_01", "m_idle_look_around_01"]},
     {"id": "roof_wine", "avatar": "Female_Party_01", "anim": ["f_drink_idle", "f_drink_drinking"], "prop": {"kind": "glass", "clip": "f_drink_drinking", "at": 0.05}},
     {"id": "roof_suit", "group": "Professions", "avatar": "Business_Male_02", "anim": "m_gestic_talk_neutral_01"},

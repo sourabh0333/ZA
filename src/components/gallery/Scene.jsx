@@ -33,7 +33,15 @@ const MODEL_URL = "/gallery/model/gallery.glb";
 // reflection maps, prefiltered at build time (scene/tools/pmrem.mjs): dark gallery, frame B, rooftop
 const ENV_URLS = ["/gallery/env_a.pmrem.hdr", "/gallery/env_b.pmrem.hdr", "/gallery/env_c.pmrem.hdr"];
 const LM_NAMES = Object.keys(lightmaps);
-const LM_URLS = LM_NAMES.map((n) => lightmaps[n].file);
+// On a phone or tablet the 2048 px lightmaps are decoded at half that: a phone's
+// screen cannot show the difference, and each is then a quarter of the upload
+// (the costliest step of a first visit) and of the memory it holds on the GPU.
+const COMPACT = window.matchMedia("(pointer: coarse)").matches || Math.max(screen.width, screen.height) <= 1024;
+const COMPACT_LIGHTMAP = 1024;
+const LM_HALVED = LM_NAMES.filter((n) => COMPACT && (lightmaps[n].size ?? 0) > COMPACT_LIGHTMAP);
+const LM_WHOLE = LM_NAMES.filter((n) => !LM_HALVED.includes(n));
+const HALVED_URLS = LM_HALVED.map((n) => lightmaps[n].file);
+const WHOLE_URLS = LM_WHOLE.map((n) => lightmaps[n].file);
 const EXPOSURE = 1.0;
 // Baked light already contains the room's indirect light, so the environment
 // map is used for reflections only: drop its diffuse (irradiance) term.
@@ -56,6 +64,11 @@ ShaderChunk.tonemapping_fragment = `
 #endif
 `;
 
+// The geometry (the model's and every visitor's) is unpacked in background
+// threads, so the main thread is free to keep the intro and the walk moving.
+// (named so the linter does not take meshopt's useWorkers for a React hook)
+const startDecoderWorkers = MeshoptDecoder.useWorkers;
+startDecoderWorkers(Math.max(1, Math.min(4, Math.floor((navigator.hardwareConcurrency || 4) / 2))));
 // Start every download at once (useLoader would otherwise suspend on each in turn).
 const withMeshopt = (loader) => loader.setMeshoptDecoder(MeshoptDecoder);
 useLoader.preload(GLTFLoader, MODEL_URL, withMeshopt);
@@ -63,7 +76,16 @@ useLoader.preload(GLTFLoader, MODEL_URL, withMeshopt);
 // own textures are): loaded as plain images, each was decoded only when it was
 // uploaded, which held the main thread for a tenth of a second per map.
 const asBitmaps = (loader) => loader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none" });
-useLoader.preload(ImageBitmapLoader, LM_URLS, asBitmaps);
+const asHalvedBitmaps = (loader) =>
+  loader.setOptions({
+    imageOrientation: "none",
+    premultiplyAlpha: "none",
+    resizeWidth: COMPACT_LIGHTMAP,
+    resizeHeight: COMPACT_LIGHTMAP,
+    resizeQuality: "high",
+  });
+useLoader.preload(ImageBitmapLoader, WHOLE_URLS, asBitmaps);
+useLoader.preload(ImageBitmapLoader, HALVED_URLS, asHalvedBitmaps);
 useLoader.preload(HDRLoader, ENV_URLS);
 useLoader.preload(GLTFLoader, EARLY_URLS, withMeshopt);
 
@@ -365,8 +387,17 @@ function syncFrame(store, camera, size, dt, flags) {
 
 function Gallery({ onReady }) {
   const gltf = useLoader(GLTFLoader, MODEL_URL, withMeshopt);
-  const lmBitmaps = useLoader(ImageBitmapLoader, LM_URLS, asBitmaps);
-  const lmTextures = useMemo(() => lmBitmaps.map((bitmap) => new Texture(bitmap)), [lmBitmaps]);
+  const wholeBitmaps = useLoader(ImageBitmapLoader, WHOLE_URLS, asBitmaps);
+  const halvedBitmaps = useLoader(ImageBitmapLoader, HALVED_URLS, asHalvedBitmaps);
+  // (back in LM_NAMES order)
+  const lmTextures = useMemo(
+    () =>
+      LM_NAMES.map((n) => {
+        const k = LM_HALVED.indexOf(n);
+        return new Texture(k < 0 ? wholeBitmaps[LM_WHOLE.indexOf(n)] : halvedBitmaps[k]);
+      }),
+    [wholeBitmaps, halvedBitmaps],
+  );
   const envs = useLoader(HDRLoader, ENV_URLS);
   const figures = useLoader(GLTFLoader, EARLY_URLS, withMeshopt);
   const gl = useThree((s) => s.gl);
@@ -380,6 +411,8 @@ function Gallery({ onReady }) {
   const [shown, setShown] = useState(false);
   const [live, setLive] = useState(false);
   const [others, setOthers] = useState(null);
+  // the other visitors are in (or failed to come): the catalogue may start hanging
+  const [settled, setSettled] = useState(false);
   // the textures left for once the gallery is showing, nearest the first view first
   const laterTextures = useRef([]);
   // (the latest callback, read when preparation ends, so a new one never restarts it)
@@ -480,14 +513,15 @@ function Gallery({ onReady }) {
     };
   }, [gl, camera, root, gltf, envs, figures, store]);
 
-  // The hang: once the gallery is showing, the frames take works from the
+  // The hang: once the gallery is showing and the other visitors are in (so
+  // their uploads and these never pile up), the frames take works from the
   // Zigguratss catalogue, and every little while those out of view change (hanging.js)
   useEffect(() => {
-    if (!live) return undefined;
+    if (!live || !settled) return undefined;
     const hanging = new Hanging(gltf.scene, gl, camera, (id, work) => store.setHung(id, work));
     hanging.start();
     return () => hanging.stop();
-  }, [live, gltf, gl, camera, store]);
+  }, [live, settled, gltf, gl, camera, store]);
 
   // Once the gallery is showing, a few milliseconds per frame: the rest of the
   // rooms' textures, nearest the first view first, then the other visitors
@@ -518,7 +552,11 @@ function Gallery({ onReady }) {
       await upload(people.group.flatMap(texturesOf));
       if (cancelled) return;
       setOthers(people);
-    })();
+    })()
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setSettled(true);
+      });
     return () => {
       cancelled = true;
     };
