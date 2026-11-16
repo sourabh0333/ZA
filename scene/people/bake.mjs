@@ -12,9 +12,9 @@ import { fileURLToPath } from "node:url";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
-import { dedup, meshopt, prune, resample, simplify, textureCompress, weld } from "@gltf-transform/functions";
+import { dedup, meshopt, prune, resample, simplify, weld } from "@gltf-transform/functions";
 import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from "meshoptimizer";
-import sharp from "sharp";
+import { webTextures } from "./web.mjs";
 
 // (required, not imported: a global Playwright install is found through NODE_PATH)
 const { chromium } = createRequire(import.meta.url)("playwright");
@@ -98,9 +98,8 @@ for (const p of people) {
     simplify({ simplifier: MeshoptSimplifier, ratio: 0.5, error: 0.0005 }),
     // mocap is keyed every frame; drop the keys a straight line between neighbours reproduces
     resample({ tolerance: 2e-4 }),
-    textureCompress({ encoder: sharp, targetFormat: "webp", quality: 80, resize: [1024, 1024], slots: /^baseColor/ }),
-    // (hair cut-outs arrive already at 512 from textures.py)
-    textureCompress({ encoder: sharp, targetFormat: "webp", quality: 80, resize: [512, 512], slots: /^(normal|metallicRoughness)/ }),
+    // the web's texture sizes (web.mjs)
+    ...webTextures(),
     meshopt({ encoder: MeshoptEncoder, level: "medium" }),
   );
   const out = path.join(output, `${p.id}.glb`);

@@ -250,7 +250,12 @@ export function frame(gallery, width, height, layout) {
         const along = [...parts].sort(
           (a, b) => a.getCenter(rel).sub(pos).dot(right) - b.getCenter(new Vector3()).sub(pos).dot(right),
         );
-        const half = SPLIT * Math.min(k.p - KEYS[i - 1].p, KEYS[i + 1].p - k.p);
+        // the views share the stretch round the stop; at either end of the walk
+        // (no key beyond it) they all fall on the side the walk comes from
+        const before = i > 0 ? k.p - KEYS[i - 1].p : Infinity;
+        const after = i < KEYS.length - 1 ? KEYS[i + 1].p - k.p : Infinity;
+        const half = SPLIT * Math.min(before, after);
+        const first = after === Infinity ? k.p - 2 * half : before === Infinity ? k.p : k.p - half;
         const step = (2 * half) / (along.length - 1);
         along.forEach((box, j) => {
           const aim = box.getCenter(new Vector3());
@@ -259,7 +264,7 @@ export function frame(gallery, width, height, layout) {
           fwd.set(aim.x - at.x, 0, aim.z - at.z).normalize();
           const back = Math.min(fitDistance(box, at, aim, tanX, tanY) - d, clearance(gallery, at, aim));
           at.addScaledVector(fwd, -Math.max(0, back));
-          keys.push({ ...k, p: k.p - half + j * step, pos: at.toArray(), target: aim.toArray(), split: k.p });
+          keys.push({ ...k, p: first + j * step, pos: at.toArray(), target: aim.toArray(), split: k.p });
           shifts.push([width / 2 - cx, height / 2 - cy]);
         });
         return;

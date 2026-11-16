@@ -14,10 +14,20 @@ const FIT = Math.log(1.25); // a work hangs in a frame within a quarter of its p
 const ROTATE_EVERY = 15000; // ms between changes
 const AT_ONCE = 3; // frames changed each time, out of view
 const STAY = 45000; // ms a work hangs at least
+const SPACING = 350; // ms at least between two works going up, so their uploads never bunch
 // metres: a frame further from the camera than this changes even in the lens
 // (it shows small, and the frustum cannot tell when a wall is in the way)
 const NOTICE = 14;
 const WALK_ORDER = new Map(WORKS.map((w, i) => [w.id, i]));
+
+/** Resolves after SPACING, once the browser is idle (or a second has passed regardless). */
+const spare = () =>
+  new Promise((resolve) =>
+    setTimeout(() => {
+      if (window.requestIdleCallback) requestIdleCallback(() => resolve(), { timeout: 1000 });
+      else resolve();
+    }, SPACING),
+  );
 
 /** A shuffled copy (a new order every visit). */
 function shuffled(list) {
@@ -107,24 +117,31 @@ export class Hanging {
     this.onHung(frame.id, work);
   }
 
-  /** The first hang, frame by frame along the walk, then the rotation. */
+  /**
+   * The first hang, frame by frame along the walk, then the rotation. Each
+   * work goes up when the page has a moment to spare (its upload is a frame
+   * the GPU cannot draw), never two together.
+   */
   async start() {
     for (const frame of this.frames) {
       if (this.stopped) return;
+      await spare();
       // (a frame in view keeps its work until it is out of view)
-      if (this.inView(frame)) continue;
+      if (this.stopped || this.inView(frame)) continue;
       const work = this.pick(frame);
       if (work) await this.hang(frame, work).catch(() => {});
     }
     this.timer = setInterval(() => this.rotate(), ROTATE_EVERY);
   }
 
-  rotate() {
+  async rotate() {
     const now = performance.now();
     const due = this.frames.filter((f) => now - f.since > STAY && !this.inView(f));
     for (const frame of shuffled(due).slice(0, AT_ONCE)) {
+      await spare();
+      if (this.stopped || this.inView(frame)) continue;
       const work = this.pick(frame);
-      if (work) this.hang(frame, work).catch(() => {});
+      if (work) await this.hang(frame, work).catch(() => {});
     }
   }
 
