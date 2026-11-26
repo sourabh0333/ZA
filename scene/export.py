@@ -10,10 +10,10 @@ import sys
 import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.paths import OUT  # noqa: E402
+from lib.paths import NAME, OUT  # noqa: E402
 
 PREVIEW = "--preview" in sys.argv
-RAW = os.path.join(OUT, "gltf", "gallery.gltf")
+RAW = os.path.join(OUT, "gltf", f"{NAME}.gltf")
 os.makedirs(os.path.dirname(RAW), exist_ok=True)
 
 for ob in list(bpy.data.objects):

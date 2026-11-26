@@ -228,6 +228,53 @@ A walker goes from `pos` to `to` and back, or along `path`, a list of
 to the roof, its height following each leg. A figure the camera passes through
 (on the stairs, say) is hidden while the camera is within 0.6 m of it.
 
+## The showroom (the products page)
+
+The products page (`src/app/products`) has a hero of its own: a walk through a
+home, built by the same scripts as the gallery, set to it with
+`ZA_SCENE=showroom` (`lib/paths.py`: its files go to `scene/out/showroom/`,
+`public/showroom/` and `src/components/showroom/data/`).
+
+```bash
+export ZA_SCENE=showroom
+node scene/tools/fetch-assets.mjs        # once: its furniture, textures and the garden view
+$B -b --factory-startup -P scene/build_showroom.py -- --web
+$B -b scene/out/showroom/showroom.blend -P scene/export.py -- --preview
+node scene/tools/optimize.mjs
+```
+
+`build_showroom.py` builds a single-storey home zoned as homes are: the front
+door opens into a foyer (a console under a work, a round brass mirror), which
+opens onto the public rooms, one light space along the garden behind
+floor-to-ceiling glass: a living room round a travertine chimney breast with
+a linear fire and walnut shelves, a dining room with a table for six, and a
+kitchen with tall units, marble counters and a fluted walnut island. A door
+leads to the private side: a bedroom (a fluted walnut wardrobe, curtains at
+the window) and its bathroom (a tub under the window before an onyx wall, a
+double vanity, a walk-in shower). Furniture keeps the usual clearances; the
+plan is drawn at the top of the script. Repeated furniture shares one mesh, so
+the model carries each piece once.
+
+It is not baked: the website lights it live (`src/components/showroom/Scene.jsx`:
+an area light the size of each window for the daylight, a few warm lights in
+each room, a dim sky-and-floor fill, the works glowing faintly with their own
+colours), and shows the garden through the windows: Poly Haven's `alps_field`,
+a meadow under mountains, which the build writes to `public/showroom/sky.webp`
+and the site uses as the background and, blurred, for the reflections.
+
+Each frame shows a work from the Zigguratss catalogue (`catalogue.json`,
+below), chosen for its proportions and built into the model, not rotated. Its
+eye icon on the website opens a card with the work's details, and the list
+under the hero walks back to any of them (`path.json` `products`).
+
+Under the showroom, "Design your wall" (`src/components/showroom/WallStudio.jsx`)
+lets a visitor paint one wall, hang any catalogue work on it at its real size
+and choose its frame and mount. Its preview (`WallScene.jsx`) borrows the
+living room's sideboard, books, vase, lamp, plant and floor from the
+showroom's model and builds the wall, frames and lighting live, so it adds
+nothing to download. The choices live in the page's address
+(`?wall=sage&art=z1672&frame=walnut&mount=slim`), so a design can be shared.
+
 ## The hang
 
 The frames show works from zigguratss.com. `node scene/tools/fetch-zigguratss.mjs [n]`

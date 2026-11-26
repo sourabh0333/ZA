@@ -15,7 +15,9 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const gallery = path.join(root, "public", "gallery");
+// ZA_SCENE=showroom for the products page's showroom (default: the gallery)
+const NAME = process.env.ZA_SCENE || "gallery";
+const gallery = path.join(root, "public", NAME);
 const ENVS = ["a", "b", "c"];
 const CHROME = process.env.CHROME || "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
@@ -116,7 +118,7 @@ const server = http.createServer((req, res) => {
   if (url === "/") return res.end(PAGE);
   const file = url.startsWith("/three/")
     ? path.join(root, "node_modules", "three", url.slice(7))
-    : path.join(gallery, url.replace(/^\/gallery\//, ""));
+    : path.join(gallery, url.replace(new RegExp(`^/${NAME}/`), ""));
   try {
     res.setHeader("content-type", types[path.extname(file)] || "application/octet-stream");
     res.end(readFileSync(file));
@@ -156,7 +158,7 @@ try {
   await send("Page.navigate", { url: `http://127.0.0.1:${port}/` });
   for (let i = 0; i < 80 && !(await evaluate("!!window.ready").catch(() => false)); i++) await sleep(250);
   for (const env of ENVS) {
-    const { width, height, data } = await evaluate(`convert("/gallery/env_${env}.hdr")`);
+    const { width, height, data } = await evaluate(`convert("/${NAME}/env_${env}.hdr")`);
     const header = Buffer.from(`#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${height} +X ${width}\n`, "ascii");
     const file = path.join(gallery, `env_${env}.pmrem.hdr`);
     writeFileSync(file, Buffer.concat([header, encodeRLE(Buffer.from(data, "base64"), width, height)]));

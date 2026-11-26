@@ -20,6 +20,20 @@ const EXIT_MS = 150 + (BANDS - 1) * 60 + 750;
 // Between real steps the count creeps on (never more than this far ahead of
 // them, nor to 100 before the view is live), so a long step never looks stuck.
 const CREEP_AHEAD = 0.07;
+// A later page of the same visit has no opening: only a slim bar of progress
+// at the foot, gone the moment the view is live (sessionStorage remembers the
+// opening was shown; the root layout marks <html> before the page paints).
+export const INTRO_SEEN = "za-intro-seen";
+const BRIEF_EXIT_MS = 500;
+
+/** Whether this visit has already seen the opening. */
+export function introSeen() {
+  try {
+    return sessionStorage.getItem(INTRO_SEEN) === "1";
+  } catch {
+    return false;
+  }
+}
 
 /** What the gallery is doing, by how far along it is. */
 function stage(ready, downloads, prep) {
@@ -41,6 +55,9 @@ function stage(ready, downloads, prep) {
  * store.prep); once full, a glint crosses it. When the view is live the screen leaves
  * as bands that shrink away top first, so for a moment the dark left over is
  * itself a ziggurat, standing in the lit room; `onEnter` then lets the page scroll.
+ * (`kicker` and `tagline` are the lines over and under the name: the products
+ * page's showroom has its own.) `brief`: this visit has seen it already, so
+ * only the progress shows.
  */
 /** The name, one masked letter per span, rising from the middle letters out. */
 function letters() {
@@ -51,7 +68,7 @@ function letters() {
   ));
 }
 
-export default function Intro({ ready, store, onEnter }) {
+export default function Intro({ ready, store, onEnter, brief = false, kicker = "The art gallery", tagline = "Six rooms · One walk" }) {
   const { progress } = useProgress();
   // (in whole percents: the preparation moves every frame, the screen only when the count does)
   const prep = useSyncExternalStore(store.subscribePrep, () => Math.round(store.getPrep() * 100) / 100, () => 0);
@@ -87,22 +104,37 @@ export default function Intro({ ready, store, onEnter }) {
 
   useEffect(() => {
     if (!ready) return undefined;
-    const wait = Math.max(HOLD_READY, MIN_SHOWN - (performance.now() - shownAt.current));
+    const wait = brief ? 0 : Math.max(HOLD_READY, MIN_SHOWN - (performance.now() - shownAt.current));
     const lift = setTimeout(() => setLeaving(true), wait);
     return () => clearTimeout(lift);
-  }, [ready]);
+  }, [ready, brief]);
 
   useEffect(() => {
     if (!leaving) return undefined;
     onEnterRef.current?.();
-    const done = setTimeout(() => setGone(true), EXIT_MS + 50);
+    const done = setTimeout(() => {
+      // (remembered only once it has gone, so it never turns brief half way out)
+      try {
+        sessionStorage.setItem(INTRO_SEEN, "1");
+      } catch {
+        // storage blocked: the opening simply shows again
+      }
+      setGone(true);
+    }, (brief ? BRIEF_EXIT_MS : EXIT_MS) + 50);
     return () => clearTimeout(done);
-  }, [leaving]);
+  }, [leaving, brief]);
 
   if (gone) return null;
   const done = ready ? 1 : shown;
   return (
-    <div className={styles.intro} data-leaving={leaving} data-ready={ready} role="status" aria-label={`Zigguratss: ${stage(ready, downloads, prep)}`}>
+    <div
+      className={styles.intro}
+      data-leaving={leaving}
+      data-ready={ready}
+      data-brief={brief}
+      role="status"
+      aria-label={`Zigguratss: ${stage(ready, downloads, prep)}`}
+    >
       {/* nothing scrolls under it, even before the page's scripts have run */}
       {!leaving && <style>{"html{overflow:hidden}"}</style>}
       <div className={styles.introBands} aria-hidden="true">
@@ -128,7 +160,7 @@ export default function Intro({ ready, store, onEnter }) {
           </div>
           <div className={styles.introLockup}>
             <p className={styles.introRule}>
-              <span>The art gallery</span>
+              <span>{kicker}</span>
             </p>
             <div className={styles.introName} style={{ "--p": done }}>
               <p className={styles.introNameLine}>{letters()}</p>
@@ -138,7 +170,7 @@ export default function Intro({ ready, store, onEnter }) {
               </span>
             </div>
             <p className={styles.introRule}>
-              <span>Six rooms &middot; One walk</span>
+              <span>{tagline}</span>
             </p>
           </div>
         </div>
