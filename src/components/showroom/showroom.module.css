@@ -1,0 +1,656 @@
+/* the stage before the 3D view is ready (the intro covers it; this shows only
+   if WebGL is missing) */
+.posterBlank {
+  background: radial-gradient(ellipse at 50% 60%, #2a2219, var(--ink) 70%);
+}
+
+/* ------------------------------------------------------------ eye icons */
+/* a white disc with an eye on each work in view, as in a showroom's hotspots;
+   Scene.jsx moves it onto the work every frame */
+.eye {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #1d1914;
+  background: rgb(250 247 242 / 0.94);
+  box-shadow: 0 2px 14px rgb(0 0 0 / 0.28);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 400ms ease, visibility 0s linear 400ms, background 250ms ease, color 250ms ease;
+}
+
+.eye svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* a soft ring breathes out from it, so it is found without being loud */
+.eye::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 1px solid rgb(250 247 242 / 0.8);
+  animation: breathe 2.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes breathe {
+  0% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+.eye[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 500ms ease 100ms, visibility 0s, background 250ms ease, color 250ms ease;
+}
+
+.eye:hover,
+.eye:focus-visible,
+.eye[data-open="true"] {
+  color: var(--paper);
+  background: #1d1914;
+}
+
+.eye[data-open="true"]::after {
+  animation: none;
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------------ card */
+/* the work's details beside its eye icon (a sheet at the foot on phones) */
+.card {
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 248px;
+  padding: 10px;
+  color: var(--paper);
+  background: rgb(14 12 10 / 0.78);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  border: 1px solid rgb(244 239 231 / 0.16);
+  pointer-events: auto;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 300ms ease, visibility 0s linear 300ms;
+}
+
+.card[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 450ms ease, visibility 0s;
+}
+
+.cardImage {
+  position: relative;
+  width: 100%;
+  max-height: 200px;
+  overflow: hidden;
+  background: #1d1914;
+}
+
+.cardImage img {
+  object-fit: cover;
+}
+
+.cardText {
+  padding: 12px 4px 4px;
+  border-left: 2px solid var(--sand);
+  margin-top: 10px;
+  padding-left: 10px;
+}
+
+.cardRoom {
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sand);
+}
+
+.cardTitle {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.cardArtist {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgb(244 239 231 / 0.78);
+}
+
+.cardMeta {
+  margin-top: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  color: rgb(244 239 231 / 0.55);
+}
+
+.cardClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--paper);
+  background: rgb(14 12 10 / 0.6);
+  font-size: 17px;
+  line-height: 1;
+}
+
+/* phones: a sheet across the foot of the screen, just above the Rooms bar */
+@media (max-width: 640px) {
+  .card {
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: 58px;
+    width: auto;
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 12px;
+    align-items: start;
+    transform: none !important;
+  }
+
+  .cardImage {
+    max-height: 120px;
+  }
+
+  .cardText {
+    margin-top: 0;
+    padding-top: 0;
+    padding-right: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eye::after {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------- below the hero */
+.section {
+  position: relative;
+  z-index: 1;
+  padding: calc(var(--header-h) + 10vh) calc(var(--frame-x) + 14px) 12vh;
+  background: var(--ink);
+  border-top: 1px solid var(--line);
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sand);
+  margin-bottom: 20px;
+}
+
+.title {
+  max-width: 16ch;
+  font-size: clamp(34px, 5.4vw, 76px);
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+}
+
+.body {
+  max-width: 48ch;
+  margin-top: 24px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: rgb(244 239 231 / 0.75);
+}
+
+/* every work on show in the showroom, each linking back to where it hangs */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 36px 28px;
+  margin-top: 64px;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+}
+
+.itemImage {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: #17140f;
+}
+
+.itemImage img {
+  object-fit: cover;
+  transition: transform 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.item:hover .itemImage img {
+  transform: scale(1.04);
+}
+
+.itemRoom {
+  margin-top: 14px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sand);
+}
+
+.itemTitle {
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.itemArtist {
+  margin-top: 2px;
+  font-size: 13px;
+  color: rgb(244 239 231 / 0.75);
+}
+
+.itemMeta {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: rgb(244 239 231 / 0.5);
+}
+
+.itemLink {
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 0 0 3px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--paper);
+  border-bottom: 1px solid var(--line);
+  transition: border-color 250ms ease;
+}
+
+.itemLink:hover,
+.itemLink:focus-visible {
+  border-bottom-color: var(--paper);
+}
+
+/* ------------------------------------------------- design your wall */
+/* the studio under the showroom: the 3D preview beside its three steps */
+.studio {
+  position: relative;
+  z-index: 1;
+  padding: calc(var(--header-h) + 8vh) calc(var(--frame-x) + 14px) 10vh;
+  background: var(--ink);
+  border-top: 1px solid var(--line);
+  scroll-margin-top: var(--header-h);
+}
+
+.studioHead {
+  max-width: 760px;
+}
+
+.studioGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
+  gap: 40px;
+  align-items: start;
+  margin-top: 48px;
+}
+
+/* (it stays in view while the steps are worked through) */
+.preview {
+  position: sticky;
+  top: calc(var(--header-h) + 20px);
+  aspect-ratio: 16 / 11;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--wall) 35%, #1b1815);
+  transition: background 400ms ease;
+}
+
+.preview canvas {
+  display: block;
+}
+
+.previewHint {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  padding: 5px 9px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(244 239 231 / 0.8);
+  background: rgb(14 12 10 / 0.55);
+  pointer-events: none;
+}
+
+.panel {
+  display: grid;
+  gap: 30px;
+}
+
+.step {
+  min-width: 0;
+  border: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.stepLabel {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgb(244 239 231 / 0.14);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stepLabel span {
+  color: var(--sand);
+}
+
+.stepLabel em {
+  margin-left: auto;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: rgb(244 239 231 / 0.6);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.swatch,
+.swatchCustom {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15);
+  transition: transform 200ms ease;
+}
+
+.swatch:hover {
+  transform: scale(1.08);
+}
+
+.swatch[aria-pressed="true"],
+.swatchCustom[data-active="true"] {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15), 0 0 0 2px var(--ink), 0 0 0 3px var(--paper);
+}
+
+/* any colour: a rainbow disc over the browser's own picker */
+.swatchCustom {
+  overflow: hidden;
+  cursor: pointer;
+  background: conic-gradient(#d9534f, #e8b84a, #8fbf6a, #4aa3c9, #6b5bd2, #c95ab4, #d9534f);
+}
+
+.swatchCustom input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.chipsLabel {
+  margin-right: 4px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(244 239 231 / 0.55);
+}
+
+.chip {
+  padding: 7px 13px;
+  font-size: 12px;
+  color: rgb(244 239 231 / 0.8);
+  border: 1px solid rgb(244 239 231 / 0.2);
+  border-radius: 999px;
+  transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: rgb(244 239 231 / 0.5);
+}
+
+.chip[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--paper);
+}
+
+.chip:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* the catalogue: a grid of thumbnails, scrolling by itself */
+.works {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 8px;
+  max-height: 268px;
+  overflow-y: auto;
+  padding: 3px 6px 3px 3px;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.workPick {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #1d1914;
+  outline-offset: 2px;
+}
+
+.workPick img {
+  object-fit: cover;
+  transition: transform 400ms ease, opacity 200ms ease;
+}
+
+.workPick:hover img {
+  transform: scale(1.06);
+}
+
+.workPick[aria-pressed="true"] {
+  outline: 2px solid var(--paper);
+}
+
+.frames {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.framePick {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 12px 6px 10px;
+  font-size: 12px;
+  color: rgb(244 239 231 / 0.8);
+  border: 1px solid rgb(244 239 231 / 0.16);
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.framePick:hover {
+  border-color: rgb(244 239 231 / 0.45);
+}
+
+.framePick[aria-pressed="true"] {
+  color: var(--paper);
+  border-color: var(--paper);
+  background: rgb(244 239 231 / 0.06);
+}
+
+/* a small picture in the frame: its moulding drawn as a border */
+.frameIcon {
+  width: 34px;
+  height: 42px;
+  background: linear-gradient(135deg, #8f7a62, #c9b392 55%, #6d5a47);
+  border: 4px solid var(--swatch);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.4);
+}
+
+.frameIcon[data-frame="none"] {
+  border-width: 0;
+  box-shadow: 2px 2px 0 var(--swatch), 0 2px 6px rgb(0 0 0 / 0.4);
+}
+
+.frameIcon[data-frame="black"] {
+  border-width: 2px;
+}
+
+.frameIcon[data-frame="gold"] {
+  border-width: 5px;
+  border-color: #c9a45c;
+  border-style: ridge;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px 16px;
+  align-items: start;
+  padding: 16px;
+  background: rgb(244 239 231 / 0.04);
+  border: 1px solid rgb(244 239 231 / 0.12);
+}
+
+.summaryImage {
+  position: relative;
+  width: 72px;
+  max-height: 96px;
+  overflow: hidden;
+}
+
+.summaryImage img {
+  object-fit: cover;
+}
+
+.summaryTitle {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.summaryArtist {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: rgb(244 239 231 / 0.75);
+}
+
+.summaryMeta {
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: rgb(244 239 231 / 0.55);
+}
+
+.summaryActions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.action {
+  padding: 11px 20px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--paper);
+  transition: background 200ms ease;
+}
+
+.action:hover {
+  background: #fff;
+}
+
+.actionQuiet {
+  padding: 11px 16px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(244 239 231 / 0.75);
+  border: 1px solid rgb(244 239 231 / 0.25);
+}
+
+.actionQuiet:hover {
+  color: var(--paper);
+  border-color: rgb(244 239 231 / 0.55);
+}
+
+/* narrower screens: the preview on top, the steps under it */
+@media (max-width: 960px) {
+  .studioGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .preview {
+    top: calc(var(--header-h) + 8px);
+    z-index: 2;
+    aspect-ratio: 4 / 3;
+    box-shadow: 0 10px 24px rgb(0 0 0 / 0.45);
+  }
+}
+
+@media (max-width: 640px) {
+  .preview {
+    aspect-ratio: 5 / 4;
+    margin: 0 calc(-1 * (var(--frame-x) + 14px));
+  }
+
+  .frames {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

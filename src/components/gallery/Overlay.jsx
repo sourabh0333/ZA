@@ -18,6 +18,7 @@ const PRIMARY_LINKS = [
   { label: "Home", href: "/" },
   { label: "Artwork", href: "/artworks" },
   { label: "Artist", href: "/artists" },
+  { label: "Products", href: "/products" },
   { label: "About", href: "/about" },
 ];
 
@@ -76,9 +77,15 @@ export function SiteHeader() {
  * The welcome over the first view: the gallery's name and an invitation to
  * walk in, in the intro's lettering, in the dark above the reception wall.
  * It rises in as the intro lifts (shown) and fades as the walk begins
- * (Scene.jsx sets --away from the camera's progress).
+ * (Scene.jsx sets --away from the camera's progress). The products page's
+ * showroom passes its own lines.
  */
-export function Welcome({ shown }) {
+export function Welcome({
+  shown,
+  rule = "Zigguratss · Art Gallery",
+  title = "Step Inside the Gallery",
+  invite = "to walk through six rooms of original art",
+}) {
   const store = useGallery();
   return (
     <div className={styles.welcomeWrap} data-shown={shown} ref={(el) => store.setWelcome(el)} aria-hidden="true">
@@ -86,12 +93,12 @@ export function Welcome({ shown }) {
       <div className={styles.welcomeShade} />
       <div className={styles.welcome}>
         <p className={styles.welcomeRule}>
-          <span>Zigguratss &middot; Art Gallery</span>
+          <span>{rule}</span>
         </p>
-        <p className={styles.welcomeTitle}>Step Inside the Gallery</p>
+        <p className={styles.welcomeTitle}>{title}</p>
         <p className={styles.welcomeSub}>
           <span className={styles.onPointer}>Scroll or press &rarr;</span>
-          <span className={styles.onTouch}>Swipe up</span> to walk through six rooms of original art
+          <span className={styles.onTouch}>Swipe up</span> {invite}
         </p>
         <span className={styles.welcomeCue} />
       </div>

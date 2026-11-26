@@ -10,8 +10,11 @@ import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 import sharp from "sharp";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const input = path.join(root, "scene", "out", "gltf", "gallery.gltf");
-const output = path.join(root, "public", "gallery", "model", "gallery.glb");
+// ZA_SCENE=showroom for the products page's showroom (default: the gallery)
+const NAME = process.env.ZA_SCENE || "gallery";
+const out = NAME === "gallery" ? path.join(root, "scene", "out") : path.join(root, "scene", "out", NAME);
+const input = path.join(out, "gltf", `${NAME}.gltf`);
+const output = path.join(root, "public", NAME, "model", `${NAME}.glb`);
 
 await MeshoptDecoder.ready;
 await MeshoptEncoder.ready;

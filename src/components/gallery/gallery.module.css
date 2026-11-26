@@ -397,6 +397,43 @@
   }
 }
 
+/* A later page of the same visit: no opening, only the progress, slim, at the
+   foot over the poster (Intro.jsx `brief`; before the page's scripts run, the
+   root layout marks <html> so a reload never flashes the full screen) */
+.intro[data-brief="true"],
+:global(html[data-intro-seen]) .intro {
+  inset: auto 0 0;
+  height: 130px;
+  pointer-events: none;
+  transition: opacity 500ms ease;
+}
+
+.intro[data-brief="true"] .introBands,
+.intro[data-brief="true"] .introGrain,
+.intro[data-brief="true"] .introTop,
+.intro[data-brief="true"] .introCenter,
+:global(html[data-intro-seen]) .intro .introBands,
+:global(html[data-intro-seen]) .intro .introGrain,
+:global(html[data-intro-seen]) .intro .introTop,
+:global(html[data-intro-seen]) .intro .introCenter {
+  display: none;
+}
+
+.intro[data-brief="true"] .introContent,
+:global(html[data-intro-seen]) .intro .introContent {
+  align-content: end;
+  background: linear-gradient(to top, rgb(11 10 9 / 0.75), rgb(11 10 9 / 0));
+}
+
+.intro[data-brief="true"] .introCount,
+:global(html[data-intro-seen]) .intro .introCount {
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.intro[data-brief="true"][data-leaving="true"] {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .intro * {
     animation: none !important;

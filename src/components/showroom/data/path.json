@@ -1,0 +1,431 @@
+{
+ "fov": 50,
+ "walk": 0.86,
+ "rooms": [
+  {
+   "label": "Entrance",
+   "p": 0.0
+  },
+  {
+   "label": "Living room",
+   "p": 0.2442
+  },
+  {
+   "label": "Dining room",
+   "p": 0.4535
+  },
+  {
+   "label": "Kitchen",
+   "p": 0.5349
+  },
+  {
+   "label": "Bedroom",
+   "p": 0.8372
+  },
+  {
+   "label": "Bathroom",
+   "p": 1.0
+  }
+ ],
+ "keys": [
+  {
+   "p": 0.0,
+   "pos": [
+    6.8,
+    1.55,
+    -0.75
+   ],
+   "target": [
+    6.8,
+    1.4,
+    -12.0
+   ]
+  },
+  {
+   "p": 0.0814,
+   "pos": [
+    7.6,
+    1.55,
+    -1.6
+   ],
+   "target": [
+    5.26,
+    1.5,
+    -2.6
+   ]
+  },
+  {
+   "p": 0.1628,
+   "pos": [
+    6.8,
+    1.55,
+    -4.5
+   ],
+   "target": [
+    2.5,
+    1.35,
+    -9.5
+   ]
+  },
+  {
+   "p": 0.2442,
+   "pos": [
+    6.7,
+    1.55,
+    -7.4
+   ],
+   "target": [
+    0.42,
+    1.5,
+    -8.5
+   ]
+  },
+  {
+   "p": 0.2907,
+   "pos": [
+    5.6,
+    1.55,
+    -11.0
+   ],
+   "target": [
+    2.0,
+    1.35,
+    -8.0
+   ]
+  },
+  {
+   "p": 0.3605,
+   "pos": [
+    2.0,
+    1.55,
+    -11.35
+   ],
+   "target": [
+    1.75,
+    1.35,
+    -5.0
+   ]
+  },
+  {
+   "p": 0.4535,
+   "pos": [
+    10.2,
+    1.55,
+    -10.6
+   ],
+   "target": [
+    9.1,
+    1.35,
+    -5.0
+   ]
+  },
+  {
+   "p": 0.5349,
+   "pos": [
+    10.3,
+    1.55,
+    -9.7
+   ],
+   "target": [
+    16.0,
+    1.25,
+    -8.6
+   ]
+  },
+  {
+   "p": 0.6163,
+   "pos": [
+    11.9,
+    1.55,
+    -10.5
+   ],
+   "target": [
+    13.6,
+    1.4,
+    -5.0
+   ]
+  },
+  {
+   "p": 0.6977,
+   "pos": [
+    10.62,
+    1.55,
+    -6.3
+   ],
+   "target": [
+    10.62,
+    1.4,
+    -2.5
+   ]
+  },
+  {
+   "p": 0.7674,
+   "pos": [
+    10.62,
+    1.55,
+    -4.3
+   ],
+   "target": [
+    13.34,
+    1.35,
+    -1.9
+   ]
+  },
+  {
+   "p": 0.8372,
+   "pos": [
+    9.45,
+    1.55,
+    -3.75
+   ],
+   "target": [
+    13.34,
+    1.45,
+    -2.0
+   ]
+  },
+  {
+   "p": 0.9186,
+   "pos": [
+    13.75,
+    1.55,
+    -4.25
+   ],
+   "target": [
+    15.8,
+    1.25,
+    -2.4
+   ]
+  },
+  {
+   "p": 1.0,
+   "pos": [
+    14.25,
+    1.55,
+    -4.35
+   ],
+   "target": [
+    14.4,
+    1.35,
+    -0.0
+   ]
+  }
+ ],
+ "products": [
+  {
+   "id": "entrance",
+   "room": "Entrance",
+   "pos": [
+    5.34,
+    2.08,
+    -2.91
+   ],
+   "centre": [
+    5.26,
+    1.62,
+    -2.6
+   ],
+   "at": 0.0814,
+   "range": [
+    0.0,
+    0.1628
+   ],
+   "title": "Guardian at the window",
+   "artist": "Nandini Saha Ghosh",
+   "medium": "Acrylic",
+   "size": "28 \u00d7 43 cm",
+   "image": "/gallery/art/z1496.webp",
+   "aspect": 0.75,
+   "page": "https://zigguratss.com/artwork/painting/landscape/fine-art/acrylic-/guardian-at-the-window--1496"
+  },
+  {
+   "id": "living",
+   "room": "Living room",
+   "pos": [
+    0.5,
+    2.165,
+    -9.16
+   ],
+   "centre": [
+    0.42,
+    1.78,
+    -8.5
+   ],
+   "at": 0.2442,
+   "range": [
+    0.1628,
+    0.2907
+   ],
+   "title": "Golden Time",
+   "artist": "Prabhawana Shailesh",
+   "medium": "Watercolors",
+   "size": "51 \u00d7 38 cm",
+   "image": "/gallery/art/z1551.webp",
+   "aspect": 1.506,
+   "page": "https://zigguratss.com/artwork/painting/landscape/figurative/watercolors/golden-time-1551"
+  },
+  {
+   "id": "sideboard",
+   "room": "Living room",
+   "pos": [
+    1.14,
+    1.815,
+    -5.14
+   ],
+   "centre": [
+    1.75,
+    1.48,
+    -5.06
+   ],
+   "at": 0.3605,
+   "range": [
+    0.2907,
+    0.4535
+   ],
+   "title": "Hornbill in the Ancient Treescape",
+   "artist": "Akshay Sawant",
+   "medium": "Acrylic",
+   "size": "198 \u00d7 122 cm",
+   "image": "/gallery/art/z1403.webp",
+   "aspect": 1.625,
+   "page": "https://zigguratss.com/artwork/painting/landscape/surrealism/acrylic-/hornbill-in-the-ancient-treescape"
+  },
+  {
+   "id": "dining",
+   "room": "Dining room",
+   "pos": [
+    8.64,
+    1.89,
+    -5.14
+   ],
+   "centre": [
+    9.1,
+    1.58,
+    -5.06
+   ],
+   "at": 0.4535,
+   "range": [
+    0.3605,
+    0.5349
+   ],
+   "title": "Mushrooms in an Ancient Treescape",
+   "artist": "Akshay Sawant",
+   "medium": "Acrylic",
+   "size": "152 \u00d7 107 cm",
+   "image": "/gallery/art/z1397.webp",
+   "aspect": 1.333,
+   "page": "https://zigguratss.com/artwork/painting/landscape/surrealism/acrylic-/mushrooms-in-an-ancient-treescape"
+  },
+  {
+   "id": "kitchen",
+   "room": "Kitchen",
+   "pos": [
+    13.315,
+    2.01,
+    -5.14
+   ],
+   "centre": [
+    13.6,
+    1.6,
+    -5.06
+   ],
+   "at": 0.6163,
+   "range": [
+    0.5349,
+    0.6977
+   ],
+   "title": "The sacred Lotus",
+   "artist": "Sangita Agarwal",
+   "medium": "Acrylic",
+   "size": "61 \u00d7 76 cm",
+   "image": "/gallery/art/z1663.webp",
+   "aspect": 0.768,
+   "page": "https://zigguratss.com/artwork/painting/spiritualism/religious/acrylic-/the-sacred-lotus--1663"
+  },
+  {
+   "id": "bedroom",
+   "room": "Bedroom",
+   "pos": [
+    13.26,
+    2.19,
+    -1.39
+   ],
+   "centre": [
+    13.34,
+    1.92,
+    -2.0
+   ],
+   "at": 0.8372,
+   "range": [
+    0.7674,
+    0.9186
+   ],
+   "title": "Sonic Devotion",
+   "artist": "Anupam Pal",
+   "medium": "Acrylic on canvas",
+   "size": "96 \u00d7 48 cm",
+   "image": "/gallery/art/z1661.webp",
+   "aspect": 1.992,
+   "page": "https://zigguratss.com/artwork/painting/religious/religious/acrylic-on-canvas/sonic-devotion-1661"
+  },
+  {
+   "id": "bath",
+   "room": "Bathroom",
+   "pos": [
+    13.54,
+    1.92,
+    -2.57
+   ],
+   "centre": [
+    13.46,
+    1.65,
+    -2.4
+   ],
+   "at": 1.0,
+   "range": [
+    0.9186,
+    1.0
+   ],
+   "title": "Serenity - River with ducks in the sunset",
+   "artist": "Nandini Saha Ghosh",
+   "medium": "Acrylic",
+   "size": "38 \u00d7 56 cm",
+   "image": "/gallery/art/z1477.webp",
+   "aspect": 0.75,
+   "page": "https://zigguratss.com/artwork/painting/landscape/fine-art/acrylic-/serenity---river-with-ducks-in-the-sunset--1477"
+  }
+ ],
+ "doors": [
+  {
+   "id": "bed",
+   "hinge": [
+    11.04,
+    0.0,
+    -5.0
+   ],
+   "openDeg": 92,
+   "open": [
+    0.6163,
+    0.6977
+   ],
+   "close": [
+    0.9186,
+    1.0
+   ]
+  },
+  {
+   "id": "bath",
+   "hinge": [
+    13.4,
+    0.0,
+    -4.64
+   ],
+   "openDeg": 92,
+   "open": [
+    0.8372,
+    0.9186
+   ],
+   "close": null
+  }
+ ]
+}

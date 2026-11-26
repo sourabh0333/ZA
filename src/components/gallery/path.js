@@ -3,7 +3,7 @@ import pathData from "./data/path.json";
 
 // Fritsch–Carlson monotone cubic, mirrors scene/lib/camera_path.py so the
 // browser follows exactly the path the Blender previews were rendered from.
-function monotone(xs, ys) {
+export function monotone(xs, ys) {
   const n = xs.length;
   const d = [];
   for (let i = 0; i < n - 1; i++) d.push((ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]));
